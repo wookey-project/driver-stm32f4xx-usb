@@ -1,0 +1,65 @@
+config USR_DRV_USB
+  bool  "userspace USB driver library"
+  default y
+  ---help---
+  Support for STM32 USB.
+config USR_DRV_USB_CFLAGS
+  string
+  default " -I../../drivers/socs/stm32f439/usb/api " if USR_DRV_USB
+
+if USR_DRV_USB
+
+menu "USB-related features"
+
+choice
+   prompt "USB device block support"
+   default USR_DRV_USB_FS
+   config USR_DRV_USB_FS
+      bool "USB Full-Speed driver support"
+   config USR_DRV_USB_HS
+      bool "USB High-Speed driver support"
+endchoice
+
+config USB_DFU
+  bool "USB DFU Support"
+  select FIRMWARE
+  default y
+  help
+    Support for Device Firmware Upload protocol over usb
+
+config USB_DEV_PRODNAME
+  string "USB device product name"
+  default "wookey"
+
+config USB_DEV_PRODNAME_INDEX
+  int "USB device product name index"
+  default 1
+
+config USB_DEV_MANUFACTURER
+  string "USB Manufacturer name"
+  default "ANSSI"
+
+config USB_DEV_MANUFACTURER_INDEX
+  int "USB device manufacturer index"
+  default 2
+
+config USB_DEV_SERIAL
+  string "USB Serial value"
+  default "123456789012345678901234"
+
+config USB_DEV_SERIAL_INDEX
+  int "USB device serial index"
+  default 3
+
+config USB_DEV_VENDORID
+  hex "USB Vendor Identifier"
+  default 0xDEAD
+
+config USB_DEV_PRODUCTID
+  hex "USB Product Identifier"
+  default 0xCAFE
+
+endmenu
+
+endif
+
