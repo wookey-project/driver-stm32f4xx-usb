@@ -49,12 +49,12 @@ static struct {
 static uint8_t 	setup_packet[8];
 
 
-static uint8_t *buffer_ep0;
-static uint32_t buffer_ep0_idx;
-static uint32_t buffer_ep0_size;
-static uint8_t 	*buffer_ep1;
-static uint32_t buffer_ep1_idx;
-static uint32_t buffer_ep1_size;
+static volatile uint8_t *buffer_ep0;
+static volatile uint32_t buffer_ep0_idx;
+static volatile uint32_t buffer_ep0_size;
+static volatile uint8_t *buffer_ep1;
+static volatile uint32_t buffer_ep1_idx;
+static volatile uint32_t buffer_ep1_size;
 
 
 void OTG_FS_IRQHandler(uint8_t irq __UNUSED, // IRQ number
@@ -846,7 +846,7 @@ void usb_fs_driver_init(void)
  * @param size Size of the data
  * @param ep Endpoint from where data is read
  */
-static void _read_fifo(uint8_t *dest, uint32_t size, uint8_t ep)
+static void _read_fifo(volatile uint8_t *dest, volatile uint32_t size, uint8_t ep)
 {
 	assert(ep <= 1);
 	assert(size <= USB_FS_RX_FIFO_SZ);
@@ -884,7 +884,7 @@ static void _read_fifo(uint8_t *dest, uint32_t size, uint8_t ep)
     set_reg_value(r_CORTEX_M_USB_FS_GINTMSK, oldmask, 0xffffffff, 0);
 }
 
-static void read_fifo(uint8_t *dest, uint32_t size, uint8_t ep)
+static void read_fifo(volatile uint8_t *dest, volatile uint32_t size, uint8_t ep)
 {
 	unsigned int i;
 	unsigned int num = size / USB_FS_RX_FIFO_SZ;
@@ -903,7 +903,12 @@ static void read_fifo(uint8_t *dest, uint32_t size, uint8_t ep)
  * \brief Receive FIFO packet read.
  *
  */
-static void usb_fs_driver_rcv_out_pkt(uint8_t *buffer, uint32_t *buffer_idx, uint32_t buffer_size, uint32_t bcnt, usb_ep_nb_t epnum){
+static void usb_fs_driver_rcv_out_pkt(volatile uint8_t *buffer,
+                                      volatile uint32_t *buffer_idx,
+                                     volatile  uint32_t buffer_size,
+                                    volatile uint32_t bcnt,
+                                    usb_ep_nb_t epnum)
+{
 	uint32_t size;
 	assert(buffer);
 	size = (bcnt + *buffer_idx) >= buffer_size ? (buffer_size - *buffer_idx) : bcnt;
