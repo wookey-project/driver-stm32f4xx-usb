@@ -318,7 +318,7 @@ static uint8_t usb_device_early_init(void) {
     dev.gpios[12].kref.port    = GPIO_PE;
     dev.gpios[12].kref.pin     = 13;
     dev.gpios[12].mode         = GPIO_PIN_OUTPUT_MODE;
-    dev.gpios[12].pupd         = GPIO_PULLDOWN;
+    dev.gpios[12].pupd         = GPIO_PULLUP;//GPIO_PULLDOWN;
     dev.gpios[12].type         = GPIO_PIN_OTYPER_PP;
     dev.gpios[12].speed        = GPIO_PIN_VERY_HIGH_SPEED;
     dev.gpios[12].afr          = GPIO_AF_OTG_HS;
@@ -881,14 +881,14 @@ static void usb_otg_hs_ulpi_hard_reset(void)
 {
 	/* TODO: macros */
 	printf("[USB HS] %s\n", __FUNCTION__);
-#if 0
-	/* Resetting the ULPI PHY is performed by setting the PE14 pin to 1 during
+
+	printf("[USB HS] Resetting ULPI through PE13 pin ...\n");
+	/* Resetting the ULPI PHY is performed by setting the PE13 pin to 1 during
 	 * some milliseconds.
 	 */
 	sys_cfg(CFG_GPIO_SET, (uint8_t)((('E' - 'A') << 4) + 13), 1);
 	delay_ms(5);
 	sys_cfg(CFG_GPIO_SET, (uint8_t)((('E' - 'A') << 4) + 13), 0);
-#endif
 }
 
 void usb_hs_driver_early_init(void (*data_received)(uint32_t), void (*data_sent)(void))

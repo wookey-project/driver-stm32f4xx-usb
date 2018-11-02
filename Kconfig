@@ -59,6 +59,29 @@ config USB_DEV_PRODUCTID
   hex "USB Product Identifier"
   default 0xCAFE
 
+choice
+   prompt "SCSI block size"
+   default USB_DEV_SCSI_BLOCK_SIZE_4096
+   ---help---
+      Set the SCSI block size reported to the host. The standard
+      size is 512 bytes. However, for performance reasons, 4K blocks
+      are a better choice if the OS supports it (modern Operating Systems
+      should do so). If you might use your USB thumb drive on old systems,
+      choose the more conservative 512 bytes block size. 
+      WARNING: >= 8K blocks might not be well supported by hosts, choose at your
+      own risks!
+   config USB_DEV_SCSI_BLOCK_SIZE_512
+      bool "SCSI blocks of 512 bytes"
+   config USB_DEV_SCSI_BLOCK_SIZE_1024
+      bool "SCSI blocks of 1024 bytes"
+   config USB_DEV_SCSI_BLOCK_SIZE_2048
+      bool "SCSI blocks of 2048 bytes"
+   config USB_DEV_SCSI_BLOCK_SIZE_4096
+      bool "SCSI blocks of 4096 bytes"
+   config USB_DEV_SCSI_BLOCK_SIZE_8192
+      bool "SCSI blocks of 8192 bytes"
+endchoice
+
 endmenu
 
 endif
