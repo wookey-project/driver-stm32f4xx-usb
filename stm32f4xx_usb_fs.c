@@ -1251,7 +1251,7 @@ static void ep_init_enum(void)
 		      USB_FS_DIEPCTL0_MPSIZ_64BYTES,
 		      USB_FS_DIEPCTL_MPSIZ_Msk(USB_FS_DXEPCTL_EP0),
 		      USB_FS_DIEPCTL_MPSIZ_Pos(USB_FS_DXEPCTL_EP0));
-   return; 
+   return;
 }
 
 
@@ -1368,7 +1368,7 @@ static void iepint_handler(void)
  */
 static void oepint_handler(void)
 {
-    
+
 	uint32_t daint = read_reg_value(r_CORTEX_M_USB_FS_DAINT);
 
 	if (daint & USB_FS_DAINT_OEPINT(USB_FS_DXEPCTL_EP0)) {
@@ -1598,7 +1598,7 @@ static void write_fifo(const void *src, uint32_t size, uint8_t ep)
 
 }
 
-static void usb_fs_driver_send_zlp(uint8_t ep){
+void usb_fs_driver_send_zlp(uint8_t ep){
 
     /* 1. Program the OTG_FS_DIEPTSIZx register for the transfer size and the corresponding packet count. */
     set_reg_value(r_CORTEX_M_USB_FS_DIEPTSIZ(ep), 1, USB_FS_DIEPTSIZ_PKTCNT_Msk(ep), USB_FS_DIEPTSIZ_PKTCNT_Pos(ep));

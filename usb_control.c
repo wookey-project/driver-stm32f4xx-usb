@@ -3,16 +3,7 @@
  */
 
 #include "autoconf.h"
-//#include "product.h"
-//#include "debug.h"
 #include "api/usb.h"
-#ifdef CONFIG_USR_DRV_USB_FS
-#include "stm32f4xx_usb_fs.h"
-#endif
-
-#ifdef CONFIG_USR_DRV_USB_HS
-#include "stm32f4xx_usb_hs.h"
-#endif
 
 
 #include "api/usb_control.h"
@@ -20,241 +11,27 @@
 
 //#include "usb_device.h"
 
-/* Microsoft Vendor Code used for OS Descriptor request */
-static uint8_t MSFT100_SIG[MSFT100_SIG_SIZE] = {
-            0x4D, 0x00, 0x53, 0x00, 0x46, 0x00, 0x54, 0x00,
-            0x31, 0x00, 0x30, 0x00, 0x30, 0x00
-        };
-
-
 usb_ctrl_device_descriptor_t usb_ctrl_device_desc = {0};
 usb_ctrl_full_configuration_descriptor_t usb_ctrl_conf_desc = {0};
-
-
-#ifdef CONFIG_USR_DRV_USB_FS 
-/**
- * \brief Read on EP0.
- */
-static void read_fs_status(void){
-    // FIXME THIS IS WRONG ... MUST BE REMOVED
-	usb_driver_read(NULL, 0, USB_FS_DXEPCTL_EP0);
-}
-#endif
-#ifdef CONFIG_USR_DRV_USB_HS
-/**
- * \brief Read on EP0.
- */
-static void read_hs_status(void){
-    // FIXME THIS IS WRONG ... MUST BE REMOVED
-	usb_driver_read(NULL, 0, USB_HS_DXEPCTL_EP0);
-}
-#endif
-
-static void read_status(void){
-#ifdef CONFIG_USR_DRV_USB_FS 
-	read_fs_status();
-#endif
-#ifdef CONFIG_USR_DRV_USB_HS
-	read_hs_status();
-#endif
-}
-
-/**
- * \brief Stall OUT endpoint
- *
- * @param ep Endpoint
- */
-#ifdef CONFIG_USR_DRV_USB_FS 
-static void usb_fs_ctrl_stall_out(uint8_t ep){
-	////printf("STALL IN\n");
-	/* Put core in Global OUT NAK mode */
-	set_reg(r_CORTEX_M_USB_FS_DCTL, 1, USB_FS_DCTL_SGONAK);
-
-	/* Disable OUT EP and set STALL bit */
-	set_reg(r_CORTEX_M_USB_FS_DIEPCTL(ep), 1, USB_FS_DIEPCTL_STALL);
-
-	/* Clear STALL bit when app is ready */
-	/* Done when request or data are received */
-}
-#endif
-#ifdef CONFIG_USR_DRV_USB_HS
-static void usb_hs_ctrl_stall_out(uint8_t ep){
-	////printf("STALL IN\n");
-	/* Put core in Global OUT NAK mode */
-	set_reg(r_CORTEX_M_USB_HS_DCTL, 1, USB_HS_DCTL_SGONAK);
-
-	/* Disable OUT EP and set STALL bit */
-	set_reg(r_CORTEX_M_USB_HS_DIEPCTL(ep), 1, USB_HS_DIEPCTL_STALL);
-
-	/* Clear STALL bit when app is ready */
-	/* Done when request or data are received */
-}
-#endif
-
-void usb_ctrl_stall_out(uint8_t ep){
-#ifdef CONFIG_USR_DRV_USB_FS 
-	usb_fs_ctrl_stall_out(ep);
-#endif
-
-#ifdef CONFIG_USR_DRV_USB_HS
-	usb_hs_ctrl_stall_out(ep);
-#endif
-}
-
-/**
- * \brief Stall IN endpoint
- *
- * @param ep Endpoint
- */
-#ifdef CONFIG_USR_DRV_USB_FS 
-void usb_fs_ctrl_stall_in(uint8_t ep __attribute__((unused))){
-	////printf("STALL OUT\n");
-	/* Disable IN EP and set STALL bit */
-	set_reg(r_CORTEX_M_USB_FS_DIEPCTL(ep), 1, USB_FS_DIEPCTL_EPDIS);
-	set_reg(r_CORTEX_M_USB_FS_DIEPCTL(ep), 1, USB_FS_DIEPCTL_STALL);
-
-	/* Assert on Endpoint Disabled interrupt */
-	if (!(read_reg_value(r_CORTEX_M_USB_FS_DIEPINT(ep)) & USB_FS_DIEPINT_EPDISD_Msk)) { while(1); // panic
-    }
-
-	/* Flush transmit FIFO
-	 * p1279 Rev14 RM0090
-	 * Read NAK Eff Int and write AHBIL bit
-	 */
-	while (read_reg_value(r_CORTEX_M_USB_FS_GINTSTS) & USB_FS_GINTSTS_GINAKEFF_Msk) {}
-	set_reg(r_CORTEX_M_USB_FS_GRSTCTL, 1, USB_FS_GRSTCTL_AHBIDL);
-
-	/* Select which ep to flush and do it */
-	set_reg(r_CORTEX_M_USB_FS_GRSTCTL, ep, USB_FS_GRSTCTL_TXFNUM);
-	set_reg(r_CORTEX_M_USB_FS_GRSTCTL, 1, USB_FS_GRSTCTL_TXFFLSH);
-
-	/* Clear STALL bit */
-	/* Done when request is received */
-}
-#endif
-
-#ifdef CONFIG_USR_DRV_USB_HS 
-void usb_hs_ctrl_stall_in(uint8_t ep){
-	////printf("STALL OUT\n");
-	/* Disable IN EP and set STALL bit */
-	set_reg(r_CORTEX_M_USB_HS_DIEPCTL(ep), 1, USB_HS_DIEPCTL_EPDIS);
-	set_reg(r_CORTEX_M_USB_HS_DIEPCTL(ep), 1, USB_HS_DIEPCTL_STALL);
-
-	/* Assert on Endpoint Disabled interrupt */
-	if (!(read_reg_value(r_CORTEX_M_USB_HS_DIEPINT(ep)) & USB_HS_DIEPINT_EPDISD_Msk)) {
-        while(1);
-    }
-
-	/* Flush transmit FIFO
-	 * p1279 Rev14 RM0090
-	 * Read NAK Eff Int and write AHBIL bit
-	 */
-	while (read_reg_value(r_CORTEX_M_USB_HS_GINTSTS) & USB_HS_GINTSTS_GINAKEFF_Msk) {}
-	set_reg(r_CORTEX_M_USB_HS_GRSTCTL, 1, USB_HS_GRSTCTL_AHBIDL);
-
-	/* Select which ep to flush and do it */
-	set_reg(r_CORTEX_M_USB_HS_GRSTCTL, ep, USB_HS_GRSTCTL_TXFNUM);
-	set_reg(r_CORTEX_M_USB_HS_GRSTCTL, 1, USB_HS_GRSTCTL_TXFFLSH);
-
-	/* Clear STALL bit */
-	/* Done when request is received */
-}
-#endif
-
-void usb_ctrl_stall_in(uint8_t ep){
-#ifdef CONFIG_USR_DRV_USB_FS
-	usb_fs_ctrl_stall_in(ep);
-#endif
-
-#ifdef CONFIG_USR_DRV_USB_HS
-	usb_hs_ctrl_stall_in(ep);
-#endif
-}
-
-/**
- *
- */
-#ifdef CONFIG_USR_DRV_USB_FS 
-void usb_fs_ctrl_stall_clear(uint8_t ep){
-	/* Clear STALL bit */
-	set_reg(r_CORTEX_M_USB_FS_DIEPCTL(ep), 0, USB_FS_DIEPCTL_STALL);
-
-}
-#endif
-
-#ifdef CONFIG_USR_DRV_USB_HS 
-void usb_hs_ctrl_stall_clear(uint8_t ep){
-	/* Clear STALL bit */
-	set_reg(r_CORTEX_M_USB_HS_DIEPCTL(ep), 0, USB_HS_DIEPCTL_STALL);
-
-}
-#endif
-
-void usb_ctrl_stall_clear(uint8_t ep){
-#ifdef CONFIG_USR_DRV_USB_FS
-	usb_fs_ctrl_stall_clear(ep);
-#endif
-#ifdef CONFIG_USR_DRV_USB_HS 
-	usb_hs_ctrl_stall_clear(ep);
-#endif
-}
-
-/**
- * \brief Send acknowledgment.
- *
- * @param status Discarded.
- */
-#ifdef CONFIG_USR_DRV_USB_FS 
-static void usb_fs_ctrl_send_status(int status){
-	if (!status) {
-		usb_fs_driver_send(NULL, 0, USB_FS_DXEPCTL_EP0);
-	}
-}
-#endif
-
-#ifdef CONFIG_USR_DRV_USB_HS 
-static void usb_hs_ctrl_send_status(int status){
-	if (!status) {
-		usb_hs_driver_send(NULL, 0, USB_HS_DXEPCTL_EP0);
-	}
-}
-#endif
-
-static void usb_ctrl_send_status(int status){
-#ifdef CONFIG_USR_DRV_USB_FS 
-	usb_fs_ctrl_send_status(status);
-#endif
-
-#ifdef CONFIG_USR_DRV_USB_HS 
-	usb_hs_ctrl_send_status(status);
-#endif
-}
 
 /**
  * \brief Send device descriptor.
  */
-#ifdef CONFIG_USR_DRV_USB_FS 
-static void usb_fs_ctrl_device_desc_rqst_handler(void){
-	usb_fs_driver_send((uint8_t *)&usb_ctrl_device_desc, sizeof(usb_ctrl_device_desc), USB_FS_DXEPCTL_EP0);
-	read_fs_status();
-}
-#endif
+static void usb_ctrl_device_desc_rqst_handler(uint16_t wLength){
+	printf("wLength:%d - sizeof(usb_ctrl_device_desc):%d\n", wLength, sizeof(usb_ctrl_device_desc));
+    if ( wLength == 0 ){
+        usb_driver_setup_send_status(0);
+        usb_driver_setup_read_status();
+        return;
+    }
 
-#ifdef CONFIG_USR_DRV_USB_HS 
-static void usb_hs_ctrl_device_desc_rqst_handler(void){
-	usb_hs_driver_send((uint8_t *)&usb_ctrl_device_desc, sizeof(usb_ctrl_device_desc), USB_HS_DXEPCTL_EP0);
-	read_hs_status();
-}
-#endif
+    if ( wLength > sizeof(usb_ctrl_device_desc)){
+        usb_driver_setup_send((uint8_t *)&usb_ctrl_device_desc, sizeof(usb_ctrl_device_desc), EP0);
+    }else{
+        usb_driver_setup_send((uint8_t *)&usb_ctrl_device_desc, wLength, EP0);
+    }
 
-static void usb_ctrl_device_desc_rqst_handler(void){
-#ifdef CONFIG_USR_DRV_USB_FS
-	usb_fs_ctrl_device_desc_rqst_handler(); 
-#endif
-
-#ifdef CONFIG_USR_DRV_USB_HS
-	usb_hs_ctrl_device_desc_rqst_handler();
-#endif
+    usb_driver_setup_read_status();
 }
 
 /**
@@ -262,29 +39,22 @@ static void usb_ctrl_device_desc_rqst_handler(void){
  *
  * @param wLength Descriptor length.
  */
-#ifdef CONFIG_USR_DRV_USB_FS
-static void usb_fs_ctrl_configuration_desc_rqst_handler(uint16_t wLength){
-	uint32_t len = usb_ctrl_conf_desc.config_desc.wTotalLength > wLength ? wLength : usb_ctrl_conf_desc.config_desc.wTotalLength;
-	usb_fs_driver_send((uint8_t *)&usb_ctrl_conf_desc, len, USB_FS_DXEPCTL_EP0);
-	read_fs_status();
-}
-#endif
-#ifdef CONFIG_USR_DRV_USB_HS
-static void usb_hs_ctrl_configuration_desc_rqst_handler(uint16_t wLength){
-	uint32_t len = usb_ctrl_conf_desc.config_desc.wTotalLength > wLength ? wLength : usb_ctrl_conf_desc.config_desc.wTotalLength;
-	usb_hs_driver_send((uint8_t *)&usb_ctrl_conf_desc, len, USB_HS_DXEPCTL_EP0);
-	read_hs_status();
-}
-#endif
-
 static void usb_ctrl_configuration_desc_rqst_handler(uint16_t wLength){
-#ifdef CONFIG_USR_DRV_USB_FS
-	usb_fs_ctrl_configuration_desc_rqst_handler(wLength);
-#endif
+	printf("wLength:%d - sizeof(usb_ctrl_device_desc):%d\n", wLength, usb_ctrl_conf_desc.config_desc.wTotalLength);
+    if ( wLength == 0 ){
+        usb_driver_setup_send_status(0);
+        usb_driver_setup_read_status();
+        return;
+    }
 
-#ifdef CONFIG_USR_DRV_USB_HS
-	usb_hs_ctrl_configuration_desc_rqst_handler(wLength);	
-#endif
+    if ( wLength > usb_ctrl_conf_desc.config_desc.wTotalLength ){
+        usb_driver_setup_send((uint8_t *)&usb_ctrl_conf_desc,
+                                    usb_ctrl_conf_desc.config_desc.wTotalLength , EP0);
+    }else{
+        usb_driver_setup_send((uint8_t *)&usb_ctrl_conf_desc, wLength, EP0);
+
+    }
+    usb_driver_setup_read_status();
 }
 
 
@@ -295,7 +65,6 @@ static void usb_ctrl_configuration_desc_rqst_handler(uint16_t wLength){
  *
  * @param packet Setup packet
  */
-
 static void usb_ctrl_default_class_rqst_handler(struct usb_setup_packet *packet){
     printf("No class rqst handler is defined for class \n", packet->bRequest);
 }
@@ -310,8 +79,9 @@ static void usb_ctrl_default_vendor_rqst_handler( __attribute__((unused)) struct
 	printf("[Vendor rqst: Not implemented\n");
 }
 
+
 static void usb_ctrl_default_set_interface_rqst_handler(int iface){
-		if (0) printf("Set interface (%x - not implemented yet)\n", iface);
+		printf("Set interface (%x - not implemented yet)\n", iface);
 		/* Program EP 0*/
 
 		/* Unmask interrupt in OTG_FS_DAINTMSK reg */
@@ -319,16 +89,25 @@ static void usb_ctrl_default_set_interface_rqst_handler(int iface){
 		/* Set up Data FIFO RAM (?) */
 
 		/* Send status IN packet */
-		usb_ctrl_send_status(0);
+
+	    if (iface == 1) {
+            usb_driver_setup_send_status(0);
+	    } else {
+            /* FIXME We should handle multiple interface */
+		    printf("%d 1\n", iface);
+            usb_driver_stall_in(EP0);
+	    }
 }
 
+
 static void usb_ctrl_default_set_configuration_rqst_handler(int conf){
-	//printf("Set configuration\n");
+	printf("%d\n", conf);
 	if (conf == 1) {
-        usb_ctrl_send_status(0);
+        usb_driver_setup_send_status(0);
 	} else {
-		/* TODO: send error status */
-		printf("[USB] SET_CONFIGURATION %d 1\n", conf);
+        /* FIXME We should handle multiple configuration */
+		printf("SET_CONFIGURATION %d 1\n", conf);
+        usb_driver_stall_in(EP0);
 	}
 }
 
@@ -336,8 +115,8 @@ static void usb_ctrl_default_set_configuration_rqst_handler(int conf){
 /**
  * \brief Send functional descriptor.
  */
-static void usb_ctrl_default_functional_desc_rqst_handler(void){
-    printf("usb_ctrl_cbs.functional_rqst_handler is not defined\n");
+static void usb_ctrl_default_functional_desc_rqst_handler(uint16_t wLength){
+    printf("usb_ctrl_cbs.functional_rqst_handler is not defined, wlength:%d\n", wLength);
 }
 
 
@@ -386,19 +165,34 @@ static void usb_ctrl_set_configuration_rqst_handler(int conf){
 }
 
 
-static void usb_ctrl_functional_desc_rqst_handler(void){
-    usb_ctrl_callbacks.functional_rqst_handler();
+static void usb_ctrl_functional_desc_rqst_handler(uint16_t wLength){
+    usb_ctrl_callbacks.functional_rqst_handler(wLength);
 }
+
+
+static void mass_storage_mft_string_desc_rqst_handler(uint16_t wLength){
+	printf("MFT String not supported (Stalling), wLength:\n", wLength);
+    usb_driver_stall_in(EP0);
+}
+
 
 /**
  * \brief Send string descriptor.
  *
  * @param index String index.
  */
-static void usb_ctrl_string_desc_rqst_handler(uint8_t index){
+static void usb_ctrl_string_desc_rqst_handler(uint8_t index, uint16_t wLength){
 	uint32_t i;
 	uint32_t len;
 	usb_string_descriptor_t string_desc;
+
+    if ( wLength == 0 ){
+        usb_driver_setup_send_status(0);
+        usb_driver_setup_read_status();
+        return;
+    }
+
+
 	string_desc.bDescriptorType = USB_DESC_STRING;
 	switch (index) {
 	case 0:
@@ -424,36 +218,33 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index){
 			string_desc.wString[i] = CONFIG_USB_DEV_SERIAL[i];
 		break;
 	case STRING_MICROSOFT_INDEX:
-		len = MSFT100_SIG_SIZE + 4;
-		string_desc.bLength = 0x12;
-		string_desc.bDescriptorType = 0x03;
-		for (i = 0; i < MSFT100_SIG_SIZE; i++)
-			string_desc.wString[i] = MSFT100_SIG[i];
-		string_desc.wString[MSFT100_SIG_SIZE] = 0x05;
-		string_desc.wString[MSFT100_SIG_SIZE + 1] = 0x00;
+        printf("STRING_MICROSOFT_INDEX");
+        usb_ctrl_callbacks.mft_string_rqst_handler(wLength);
 		break;
 	default:
 		/* TODO: send error status */
 		printf("Invalid string index\n");
-
-#ifdef CONFIG_USR_DRV_USB_FS
-        usb_driver_stall_in(USB_FS_DXEPCTL_EP0);
-#endif
-#ifdef CONFIG_USR_DRV_USB_HS 
-        usb_driver_stall_in(USB_HS_DXEPCTL_EP0);
-#endif
+        usb_driver_stall_in(EP0);
         return;
 	}
 
-#ifdef CONFIG_USR_DRV_USB_FS
-	usb_driver_send((uint8_t *)&string_desc, string_desc.bLength, USB_FS_DXEPCTL_EP0);
-#endif
-#ifdef CONFIG_USR_DRV_USB_HS
-	usb_driver_send((uint8_t *)&string_desc, string_desc.bLength, USB_HS_DXEPCTL_EP0);
-#endif
-	read_status();
+    if ( wLength > string_desc.bLength){
+    	usb_driver_setup_send((uint8_t *)&string_desc, string_desc.bLength, EP0);
+    }else{
+        usb_driver_setup_send((uint8_t *)&string_desc, wLength, EP0);
+    }
+    usb_driver_setup_read_status();
 }
 
+
+static void print_setup_packet(struct usb_setup_packet *packet){
+    printf("bmRequestType:%x, bRequest:%x, wValue:%x, wIndex:%x, wLength:%x\n",
+            packet->bmRequestType,
+            packet->bRequest,
+            packet->wValue,
+            packet->wIndex,
+            packet->wLength);
+}
 
 
 /**
@@ -462,10 +253,13 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index){
  * @param packet Setup packet
  */
 static void usb_ctrl_get_descriptor_rqst_handler(struct usb_setup_packet *packet){
-	switch (packet->wValue >> 8) {
+
+    print_setup_packet(packet);
+
+    switch (packet->wValue >> 8) {
 	case USB_DESC_DEVICE:
 		printf("Device descriptor Rqst\n");
-		usb_ctrl_device_desc_rqst_handler();
+		usb_ctrl_device_desc_rqst_handler(packet->wLength);
 		break;
 	case USB_DESC_CONFIG:
 		printf("Configuration descriptor Rqst\n");
@@ -473,24 +267,25 @@ static void usb_ctrl_get_descriptor_rqst_handler(struct usb_setup_packet *packet
 		break;
 	case USB_DESC_STRING:
 		printf("String descriptor Rqst, Index: %x\n", (packet->wValue & 0xff));
-		usb_ctrl_string_desc_rqst_handler(packet->wValue & 0xff);
+		usb_ctrl_string_desc_rqst_handler(packet->wValue & 0xff, packet->wLength);
 		break;
 	case USB_DESC_FUNCT:
 		printf("Functional descriptor Rqst\n");
-		usb_ctrl_functional_desc_rqst_handler();
+		usb_ctrl_functional_desc_rqst_handler(packet->wLength);
 		break;
+    case USB_DESC_DEVQUAL:
+        usb_driver_stall_out(0);
+        break;
 	default:
 		/* In case of unsupported descriptor request, we send a
 		 * dummy packet to avoid waiting a timeout from the
 		 * host before sending another request.
 		 */
-		usb_ctrl_send_status(0);
-		read_status();
+		usb_driver_setup_send_status(0);
+		usb_driver_setup_read_status();
 		printf("Unhandled descriptor Rqst: %x\n", packet->wValue >> 8);
 	}
 }
-
-
 
 
 /**
@@ -504,28 +299,31 @@ static void usb_ctrl_standard_rqst_handler(struct usb_setup_packet *packet){
 	switch (packet->bRequest) {
 
 	case USB_RQST_SET_ADDRESS:
-		//printf("Set adress Rqst\n");
 		usb_driver_set_address(packet->wValue);
-        	usb_ctrl_send_status(0);
+        	usb_driver_setup_send_status(0);
 		break;
 
 	case USB_RQST_GET_DESCRIPTOR:
-		//printf("Get descriptor Rqst\n");
 		usb_ctrl_get_descriptor_rqst_handler(packet);
 		break;
 
 	case USB_RQST_SET_CONFIGURATION:
-        	//printf("Set confiuration Rqst\n");
-        	usb_ctrl_set_configuration_rqst_handler(packet->wValue);
+        usb_ctrl_set_configuration_rqst_handler(packet->wValue);
 		break;
 
 	case USB_RQST_SET_INTERFACE: // TODO > DocID018909 Rev12 p1354/1744
-        	//printf("Set interface Rqst\n");
-        	usb_ctrl_set_interface_rqst_handler(packet->wValue);
+        usb_ctrl_set_interface_rqst_handler(packet->wValue);
 		break;
 
+    case USB_RQST_GET_STATUS:
+        // FIXME Work around
+        printf("USB_RQST_GET_STATUS\n");
+		usb_driver_setup_send("\x00\x00", 2, EP0);
+		usb_driver_setup_read_status();
+        break;
 	default:
 		printf("Unhandled std request: %x\n", packet->bRequest);
+        usb_driver_stall_in(EP0);
 	}
 }
 
@@ -554,13 +352,13 @@ void usb_ctrl_handler(struct usb_setup_packet *packet){
 }
 
 
-
-
 /**
  * \brief Initialization of usb ctrl callbacks functions.
  * @param callbacks
  */
-void usb_ctrl_init( usb_ctrl_callbacks_t cbs, usb_ctrl_device_descriptor_t device_desc, usb_ctrl_full_configuration_descriptor_t conf_desc ){
+void usb_ctrl_init( usb_ctrl_callbacks_t cbs,
+                    usb_ctrl_device_descriptor_t device_desc,
+                    usb_ctrl_full_configuration_descriptor_t conf_desc ){
 
         if (cbs.class_rqst_handler != NULL){
             usb_ctrl_callbacks.class_rqst_handler = cbs.class_rqst_handler;
@@ -579,6 +377,9 @@ void usb_ctrl_init( usb_ctrl_callbacks_t cbs, usb_ctrl_device_descriptor_t devic
         }
         if (cbs.functional_rqst_handler != NULL){
             usb_ctrl_callbacks.functional_rqst_handler = cbs.functional_rqst_handler;
+        }
+        if (cbs.mft_string_rqst_handler != NULL){
+            usb_ctrl_callbacks.mft_string_rqst_handler = cbs.mft_string_rqst_handler;
         }
 
         usb_ctrl_device_desc = device_desc;

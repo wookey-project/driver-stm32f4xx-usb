@@ -36,8 +36,9 @@
 #define USB_DESC_CONFIG			0x2
 #define USB_DESC_STRING			0x3
 #define USB_DESC_INTERFACE		0x4
-#define USB_DESC_EP			0x5
-#define USB_DESC_FUNCT			0x21 /* Value found thanks to dfu-util */
+#define USB_DESC_EP			    0x5
+#define USB_DESC_DEVQUAL        0x6
+#define USB_DESC_FUNCT			0x21
 
 /* EP */
 #define USB_EP_ATTR_NO_SYNC (0 << 2)
@@ -192,11 +193,12 @@ struct usb_setup_packet {
 
 /* Callbacks */
 typedef void (*cb_class_rqst_handler_t) (struct usb_setup_packet *);
-typedef void (*cb_functional_rqst_desc_t) (void);
+typedef void (*cb_functional_rqst_desc_t) (uint16_t wLenght);
 typedef void (*cb_vendor_rqst_handler_t) (struct usb_setup_packet *);
 typedef void (*cb_set_configuration_rqst_handler_t) (int);
 typedef void (*cb_set_interface_rqst_handler_t) (int);
-
+typedef void (*cb_mft_string_rqst_handler_t) (uint16_t wLength);
+typedef void (*cb_mft_string_rqst_handler_t) (uint16_t wLenght);
 
 typedef struct __packed usb_ctrl_callbacks {
     cb_class_rqst_handler_t             class_rqst_handler;
@@ -204,6 +206,7 @@ typedef struct __packed usb_ctrl_callbacks {
     cb_set_configuration_rqst_handler_t set_configuration_rqst_handler;
     cb_set_interface_rqst_handler_t     set_interface_rqst_handler;
     cb_functional_rqst_desc_t           functional_rqst_handler;
+    cb_mft_string_rqst_handler_t        mft_string_rqst_handler;
 } usb_ctrl_callbacks_t;
 
 
@@ -215,7 +218,7 @@ void usb_ctrl_stall_clear(uint8_t ep);
 
 #define MAX_CTRL_PACKET_SIZE 64
 
-#ifdef CONFIG_USR_DRV_USB_FS 
+#ifdef CONFIG_USR_DRV_USB_FS
 
 # define MAX_DATA_PACKET_SIZE 64
 
@@ -251,7 +254,7 @@ typedef enum {
 
 #endif
 
-#ifdef CONFIG_USR_DRV_USB_HS 
+#ifdef CONFIG_USR_DRV_USB_HS
 
 # define MAX_DATA_PACKET_SIZE 512
 typedef enum {

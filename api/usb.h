@@ -4,6 +4,15 @@
 #include "api/types.h"
 #include "autoconf.h"
 
+#ifdef CONFIG_USR_DRV_USB_FS
+    #define EP0 USB_FS_DXEPCTL_EP0
+#endif
+
+#ifdef CONFIG_USR_DRV_USB_HS
+    #define EP0 USB_HS_DXEPCTL_EP0
+#endif
+
+
 typedef enum {
     USB_OK  = 0,
     USB_ERROR_BUSY = 1,
@@ -25,20 +34,24 @@ void usb_driver_early_init(void (*data_received)(uint32_t), void (*data_sent)(vo
 void usb_driver_init(void);
 
 /**
- * usb_driver_send - Send data throw USB
+ * usb_driver_setup_send - Send data throw USB
  * @src: address of the data to send. The buffer's size must be at least @size.
  * @size: number of bytes to send.
  * @ep: endpoint on which send data.
  */
-void usb_driver_send(const void *src, uint32_t size, uint8_t ep);
+void usb_driver_setup_send(const void *src, uint32_t size, uint8_t ep);
+
+
+void usb_driver_setup_send_status(int status);
+void usb_driver_setup_read_status(void);
 
 /**
- * usb_driver_read - Read data from USB
+ * usb_driver_setup_read - Read data from USB
  * @dst: buffer in which read data will be written.
  * @size: number of bytes to read.
  * @ep: endpoint on which read data.
  */
-void usb_driver_read(void *dst, uint32_t size, uint8_t ep);
+void usb_driver_setup_read(void *dst, uint32_t size, uint8_t ep);
 
 /**
  * usb_driver_set_address - Set the address of the device

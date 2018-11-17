@@ -62,6 +62,9 @@ void usb_fs_driver_init(void);
  */
 void usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep);
 
+void usb_fs_driver_send_zlp(uint8_t ep);
+
+
 /**
  * usb_driver_read - Read data from USB
  * @dst: buffer in which read data will be written.
