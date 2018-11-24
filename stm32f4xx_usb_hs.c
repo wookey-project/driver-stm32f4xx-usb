@@ -1526,7 +1526,7 @@ void OTG_HS_IRQHandler(uint8_t irq __UNUSED, // IRQ number
     val &= intmsk;
 
 	for (i = 0; i < 32; i++) {
-		if (!(intsts & (1 << i)) || !(intmsk & (1 << i)))
+		if (!(intsts & ((uint32_t)1 << i)) || !(intmsk & ((uint32_t)1 << i)))
 			continue;
 		if (usb_hs_isr_handlers[i]){
 			usb_hs_isr_handlers[i]();
