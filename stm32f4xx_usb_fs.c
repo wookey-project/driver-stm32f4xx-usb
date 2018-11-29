@@ -149,7 +149,8 @@ static const char *name = "usb-otg-fs";
 static uint8_t usb_device_early_init(void) {
 
     e_syscall_ret ret = 0;
-    device_t dev = { 0 };
+    device_t dev;
+    memset((void*)&dev, 0, sizeof(device_t));
     int      dev_desc = 0;
 
     memcpy(dev.name, name, strlen(name));

@@ -11,8 +11,15 @@
 
 //#include "usb_device.h"
 
-usb_ctrl_device_descriptor_t usb_ctrl_device_desc = {0};
-usb_ctrl_full_configuration_descriptor_t usb_ctrl_conf_desc = {0};
+usb_ctrl_device_descriptor_t usb_ctrl_device_desc;
+usb_ctrl_full_configuration_descriptor_t usb_ctrl_conf_desc;
+
+static void usb_ctrl_init_structures(void)
+{
+    memset((void*)&usb_ctrl_device_desc, 0, sizeof(usb_ctrl_device_descriptor_t));
+    memset((void*)&usb_ctrl_conf_desc, 0, sizeof(usb_ctrl_full_configuration_descriptor_t));
+}
+
 
 /**
  * \brief Send device descriptor.
@@ -359,6 +366,8 @@ void usb_ctrl_handler(struct usb_setup_packet *packet){
 void usb_ctrl_init( usb_ctrl_callbacks_t cbs,
                     usb_ctrl_device_descriptor_t device_desc,
                     usb_ctrl_full_configuration_descriptor_t conf_desc ){
+
+        usb_ctrl_init_structures();
 
         if (cbs.class_rqst_handler != NULL){
             usb_ctrl_callbacks.class_rqst_handler = cbs.class_rqst_handler;

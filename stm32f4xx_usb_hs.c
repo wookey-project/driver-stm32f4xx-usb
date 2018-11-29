@@ -187,7 +187,8 @@ static uint8_t usb_device_early_init(void) {
     };
 
     e_syscall_ret ret = 0;
-    device_t dev = { 0 };
+    device_t dev;
+    memset((void*)&dev, 0, sizeof(device_t));
     int      dev_desc = 0;
 
     memcpy(dev.name, name, strlen(name));
@@ -1663,7 +1664,7 @@ static void write_fifo(const void *src, uint32_t size, uint8_t ep)
 
 }
 
-static void usb_hs_driver_send_zlp(uint8_t ep){
+void usb_hs_driver_send_zlp(uint8_t ep){
 
     /* 1. Program the OTG_HS_DIEPTSIZx register for the transfer size and the corresponding packet count. */
     set_reg_value(r_CORTEX_M_USB_HS_DIEPTSIZ(ep), 1, USB_HS_DIEPTSIZ_PKTCNT_Msk(ep), USB_HS_DIEPTSIZ_PKTCNT_Pos(ep));
