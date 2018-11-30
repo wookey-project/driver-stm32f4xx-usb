@@ -75,4 +75,7 @@ void usb_driver_stall_in_clear(uint8_t ep, uint8_t type, uint8_t start_data_togg
 void usb_driver_stall_out(uint8_t ep);
 void usb_driver_stall_out_clear(uint8_t ep, uint8_t type, uint8_t start_data_toggle);
 
+/* Map USB device, needed for USB HS only */
+void usb_driver_map(void);
+
 #endif /* STM32F4XX_USB_H */

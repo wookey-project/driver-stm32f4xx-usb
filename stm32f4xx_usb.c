@@ -54,6 +54,13 @@ void usb_driver_early_init(void (*data_received)(uint32_t), void (*data_sent)(vo
 
 
 
+void usb_driver_map(void)
+{
+#ifdef CONFIG_USR_DRV_USB_HS
+    usb_hs_driver_map();
+#endif
+}
+
 /**
  * \brief Send acknowledgment.
  *

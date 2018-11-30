@@ -170,9 +170,21 @@ void usb_hs_driver_device_disconnect(void){
 
 static const char *name = "usb-otg-hs";
 
+
 void OTG_HS_IRQHandler(uint8_t irq __UNUSED, // IRQ number
                        uint32_t sr,  // content of posthook.status,
                        uint32_t dr);  // content of posthook.data)
+
+static int      dev_desc = 0;
+
+void usb_hs_driver_map(void)
+{
+    uint8_t ret;
+    ret = sys_cfg(CFG_DEV_MAP, dev_desc);
+    if (ret != SYS_E_DONE) {
+        printf("Unable to map USB device !!!\n");
+    }
+}
 
 static uint8_t usb_device_early_init(void) {
 
@@ -189,12 +201,16 @@ static uint8_t usb_device_early_init(void) {
     e_syscall_ret ret = 0;
     device_t dev;
     memset((void*)&dev, 0, sizeof(device_t));
-    int      dev_desc = 0;
 
     memcpy(dev.name, name, strlen(name));
     dev.address = USB_OTG_HS_BASE;
     dev.size = 0x4000;
     dev.irq_num = 1;
+    /* device is mapped voluntary and will be activated after the full
+     * authentication sequence
+     */
+    dev.map_mode = DEV_MAP_VOLUNTARY;
+
 
     /* IRQ configuration */
     dev.irqs[0].handler = OTG_HS_IRQHandler;
