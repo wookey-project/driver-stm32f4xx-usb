@@ -139,27 +139,10 @@ typedef struct __packed usb_ctrl_endpoint_descriptor {
 } usb_ctrl_endpoint_descriptor_t;
 
 
-
-typedef struct __packed usb_ctrl_full_configuration_descriptor {
-	usb_ctrl_configuration_descriptor_t config_desc;
-    /*  Each interfaces if followed by its endpoints configuration
-     *  FIXME We only support one interface per configuration
-     */
-	usb_ctrl_interface_descriptor_t interface_desc;
+typedef struct __packed usb_ctr_full_endpoint_descriptor {
 	usb_ctrl_endpoint_descriptor_t ep_in;
 	usb_ctrl_endpoint_descriptor_t ep_out;
-} usb_ctrl_full_configuration_descriptor_t;
-
-
-/**
- * \brief String descriptor.
- */
-typedef struct __packed usb_string_descriptor {
-	uint8_t bLength;
-	uint8_t bDescriptorType;
-	uint16_t wString[MAX_DESC_STRING_SIZE];
-} usb_string_descriptor_t;
-
+} usb_ctr_full_endpoint_descriptor_t;
 
 typedef struct __packed usb_functional_descriptor {
     uint8_t bLength;
@@ -175,6 +158,29 @@ typedef struct __packed usb_functional_descriptor {
     uint16_t wTransferSize;
     uint16_t bcdDFUVersion;
 } usb_functional_descriptor_t;
+
+typedef struct __packed usb_ctrl_full_configuration_descriptor {
+	usb_ctrl_configuration_descriptor_t config_desc;
+    /*  Each interfaces if followed by its endpoints configuration
+     *  FIXME We only support one interface per configuration
+     */
+	usb_ctrl_interface_descriptor_t interface_desc;
+	union {
+		usb_ctr_full_endpoint_descriptor_t ep;
+		usb_functional_descriptor_t func;
+	};
+} usb_ctrl_full_configuration_descriptor_t;
+
+
+/**
+ * \brief String descriptor.
+ */
+typedef struct __packed usb_string_descriptor {
+	uint8_t bLength;
+	uint8_t bDescriptorType;
+	uint16_t wString[MAX_DESC_STRING_SIZE];
+} usb_string_descriptor_t;
+
 
 /**
  * \struct usb_setup_packet
