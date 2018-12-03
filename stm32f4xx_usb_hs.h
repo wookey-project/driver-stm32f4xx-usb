@@ -94,6 +94,8 @@ void usb_hs_driver_stall_out_clear(uint8_t ep, uint8_t type, uint8_t start_data_
 
 void usb_hs_driver_map(void);
 
+void usb_hs_driver_send_zlp(uint8_t ep);
+
 #endif /*!CONFIG_USR_DRV_USB_HS*/
 
 #endif /* STM32F4XX_USB_HD_H */
