@@ -1108,7 +1108,8 @@ static void rxflvl_handler(void)
        	    	         *      available for reading from the receive FIFO.
                 	 */
 		        if (pktsts == SETUP && bcnt == 0x8 && dpid == 0) {
-			        read_fifo(setup_packet, 8, epnum);
+                    aprintf("EP0 Setup stage pattern\n");
+                    read_fifo(setup_packet, 8, epnum);
                                                     /* After this, the Data stage begins.
 				                     * A Setup stage done is received,
 				                     * which triggers a Setup interrupt
@@ -1120,10 +1121,11 @@ static void rxflvl_handler(void)
 	                *      the core asserts a Setup interrupt on the specified control OUT endpoint.
     		        */
 	                if (pktsts == SETUP_Done){
-       		             printf("EP0 Setup stage done pattern\n");
+       		             aprintf("EP0 Setup stage done pattern\n");
        		         }
                		 /* d) Data OUT packet pattern */
 			if (pktsts == DataOUT && bcnt > 0) {
+       		             aprintf("*");
        		             usb_hs_driver_rcv_out_pkt(buffer_ep0, &buffer_ep0_idx, buffer_ep0_size, bcnt, epnum);
 			}
 			break;
@@ -1132,7 +1134,7 @@ static void rxflvl_handler(void)
 			usb_hs_driver_rcv_out_pkt(buffer_ep1, &buffer_ep1_idx, buffer_ep1_size, bcnt, epnum);
 		        break;
 	        default:
-		        printf("RXFLVL on bad EP %d!", epnum);
+		        aprintf("RXFLVL on bad EP %d!", epnum);
 	        }
 	    }
 

@@ -167,7 +167,7 @@ typedef struct __packed usb_ctrl_full_configuration_descriptor {
 	usb_ctrl_interface_descriptor_t interface_desc;
 	union {
 		usb_ctr_full_endpoint_descriptor_t ep;
-		usb_functional_descriptor_t func;
+		usb_functional_descriptor_t functional_desc;
 	};
 } usb_ctrl_full_configuration_descriptor_t;
 
