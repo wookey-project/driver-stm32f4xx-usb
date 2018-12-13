@@ -226,7 +226,7 @@ void usb_ctrl_stall_clear(uint8_t ep);
 
 #ifdef CONFIG_USR_DRV_USB_FS
 
-# define MAX_DATA_PACKET_SIZE 64
+# define MAX_DATA_PACKET_SIZE(ep) 64
 
 typedef enum {
     USB_FS_DXEPCTL_EP0 = 0,
@@ -262,7 +262,8 @@ typedef enum {
 
 #ifdef CONFIG_USR_DRV_USB_HS
 
-# define MAX_DATA_PACKET_SIZE 512
+# define MAX_DATA_PACKET_SIZE(ep) ((ep == 0) ? 64 : 512)
+
 typedef enum {
     USB_HS_DXEPCTL_EP0 = 0,
     USB_HS_DXEPCTL_EP1 = 1,

@@ -37,6 +37,12 @@
 #define USB_FS_RX_FIFO_SZ       128
 #define USB_FS_TX_FIFO_SZ       128
 
+#if USB_FS_DEBUG
+#define log_printf(...) aprintf(__VA_ARGS__)
+#else
+#define log_printf(...) {};
+#endif
+
 /**
  * \struct setup_packet
  * \brief Setup packet, used to transfer data on EP0
@@ -74,7 +80,7 @@ static usb_ep_error_t usb_fs_driver_TXFIFO_flush(uint8_t ep){
     count = 0;
 	while (get_reg(r_CORTEX_M_USB_FS_GRSTCTL, USB_FS_GRSTCTL_TXFFLSH)){
         if (++count > USB_REG_CHECK_TIMEOUT)
-		    printf("HANG! Waiting for the core to clear the TxFIFO Flush bit GRSTCTL:TXFFLSH\n");
+		    log_printf("HANG! Waiting for the core to clear the TxFIFO Flush bit GRSTCTL:TXFFLSH\n");
         return -USB_ERROR_BUSY;
     }
     /*
@@ -84,13 +90,13 @@ static usb_ep_error_t usb_fs_driver_TXFIFO_flush(uint8_t ep){
 
     /* FIXME Read: the NAK effective interrupt ensures the core is not reading from the FIFO */
 
-    /* Write: the AHBIDL bit in OTG_HS_GRSTCTL ensures that the core is not writing anything to the FIFO */
+    /* Write: the AHBIDL bit in OTG_FS_GRSTCTL ensures that the core is not writing anything to the FIFO */
 	set_reg(r_CORTEX_M_USB_FS_GRSTCTL, ep, USB_FS_GRSTCTL_TXFNUM);
 	set_reg(r_CORTEX_M_USB_FS_GRSTCTL, 1, USB_FS_GRSTCTL_TXFFLSH);
     count = 0;
 	while (get_reg(r_CORTEX_M_USB_FS_GRSTCTL, USB_FS_GRSTCTL_TXFFLSH)){
         if (++count > USB_REG_CHECK_TIMEOUT)
-		    printf("HANG! Waiting for the core to clear the TxFIFO Flush bit GRSTCTL:TXFFLSH\n");
+		    log_printf("HANG! Waiting for the core to clear the TxFIFO Flush bit GRSTCTL:TXFFLSH\n");
         return -USB_ERROR_BUSY;
     }
     return 0;
@@ -105,7 +111,7 @@ static usb_ep_error_t usb_fs_driver_RXFIFO_flush(void){
     count = 0;
 	while (get_reg(r_CORTEX_M_USB_FS_GRSTCTL, USB_FS_GRSTCTL_RXFFLSH)){
         if (++count > USB_REG_CHECK_TIMEOUT)
-		    printf("HANG! Waiting for the core to clear the TxFIFO Flush bit GRSTCTL:RXFFLSH\n");
+		    log_printf("HANG! Waiting for the core to clear the TxFIFO Flush bit GRSTCTL:RXFFLSH\n");
         return -USB_ERROR_BUSY;
     }
     /*
@@ -115,13 +121,13 @@ static usb_ep_error_t usb_fs_driver_RXFIFO_flush(void){
 
     /* FIXME Read: the NAK effective interrupt ensures the core is not reading from the FIFO */
 
-    /* Write: the AHBIDL bit in OTG_HS_GRSTCTL ensures that the core is not writing anything to the FIFO */
+    /* Write: the AHBIDL bit in OTG_FS_GRSTCTL ensures that the core is not writing anything to the FIFO */
 	//set_reg(r_CORTEX_M_USB_FS_GRSTCTL, ep, USB_FS_GRSTCTL_RXFNUM);
 	set_reg(r_CORTEX_M_USB_FS_GRSTCTL, 1, USB_FS_GRSTCTL_RXFFLSH);
     count = 0;
 	while (get_reg(r_CORTEX_M_USB_FS_GRSTCTL, USB_FS_GRSTCTL_RXFFLSH)){
         if (++count > USB_REG_CHECK_TIMEOUT)
-		    printf("HANG! Waiting for the core to clear the RxFIFO Flush bit GRSTCTL:TXFFLSH\n");
+		    log_printf("HANG! Waiting for the core to clear the RxFIFO Flush bit GRSTCTL:TXFFLSH\n");
         return -USB_ERROR_BUSY;
     }
     return 0;
@@ -300,7 +306,7 @@ usb_ep_error_t usb_fs_driver_in_endpoint_activate(usb_ep_t *ep)
 {
     /* Sanitization check */
     if (!ep) {
-        printf("EP%d is not initialized \n", ep->num);
+        log_printf("EP%d is not initialized \n", ep->num);
         return -USB_ERROR_BAD_INPUT;
     }
 
@@ -310,8 +316,8 @@ usb_ep_error_t usb_fs_driver_in_endpoint_activate(usb_ep_t *ep)
     }
 
 	/* Maximum packet size */
-    if ((size_from_mpsize(ep) <= 0) || size_from_mpsize(ep) > MAX_DATA_PACKET_SIZE) {
-        printf("EP%d bad maxpacket size: %d\n", ep->num, size_from_mpsize(ep));
+    if ((size_from_mpsize(ep) <= 0) || size_from_mpsize(ep) > MAX_DATA_PACKET_SIZE(ep->num)) {
+        log_printf("EP%d bad maxpacket size: %d\n", ep->num, size_from_mpsize(ep));
         return -USB_ERROR_RANGE;
     }
 
@@ -320,7 +326,7 @@ usb_ep_error_t usb_fs_driver_in_endpoint_activate(usb_ep_t *ep)
                                                       USB_FS_DIEPCTL_MPSIZ_Pos(ep->num));
     /* Define endpoint type */
     if (ep->type == USB_FS_DXEPCTL_EPTYP_ISOCHRO) {
-        printf("EP%d Isochronous is not suported yet\n", ep->num);
+        log_printf("EP%d Isochronous is not suported yet\n", ep->num);
         return -USB_ERROR_NOT_SUPORTED;
     }
 
@@ -532,7 +538,7 @@ usb_ep_error_t usb_fs_driver_stall_in(uint8_t ep){
     int count = 0;
 	while (get_reg(r_CORTEX_M_USB_FS_DIEPCTL(ep), USB_FS_DIEPCTL_EPENA)){
         if (++count > USB_REG_CHECK_TIMEOUT)
-		    printf("HANG! DIEPCTL:EPENA\n");
+		    log_printf("HANG! DIEPCTL:EPENA\n");
         return -USB_ERROR_BUSY;
     }
 
@@ -551,7 +557,7 @@ usb_ep_error_t usb_fs_driver_stall_in(uint8_t ep){
     count = 0;
 	while (get_reg(r_CORTEX_M_USB_FS_GINTSTS, USB_FS_GINTSTS_GINAKEFF)){
         if (++count > USB_REG_CHECK_TIMEOUT)
-		    printf("HANG! GINTSTS:GINAKEFF\n");
+		    log_printf("HANG! GINTSTS:GINAKEFF\n");
         return -USB_ERROR_BUSY;
     }
 
@@ -614,7 +620,7 @@ static usb_ep_error_t usb_otg_fs_core_reset(void)
 	/* Wait for AHB master idle */
 	while (!get_reg(r_CORTEX_M_USB_FS_GRSTCTL, USB_FS_GRSTCTL_AHBIDL)){
         if (++count > USB_REG_CHECK_TIMEOUT)
-		    printf("HANG! AHB Idle GRSTCTL:AHBIDL\n");
+		    log_printf("HANG! AHB Idle GRSTCTL:AHBIDL\n");
         return -USB_ERROR_BUSY;
     }
 
@@ -622,7 +628,7 @@ static usb_ep_error_t usb_otg_fs_core_reset(void)
 	set_reg(r_CORTEX_M_USB_FS_GRSTCTL, 1, USB_FS_GRSTCTL_CSRST);
 	while (get_reg(r_CORTEX_M_USB_FS_GRSTCTL, USB_FS_GRSTCTL_CSRST)){
         if (++count > USB_REG_CHECK_TIMEOUT){
-		    printf("HANG! Core Soft RESET\n");
+		    log_printf("HANG! Core Soft RESET\n");
         }
         return -USB_ERROR_BUSY;
     }
@@ -981,7 +987,7 @@ static void rxflvl_handler(void)
    	/* 2. Mask the RXFLVL interrupt (in OTG_FS_GINTSTS) by writing to RXFLVL = 0 (in OTG_FS_GINTMSK),
      	 *    until it has read the packet from the receive FIFO
      	 */
-//	set_reg(r_CORTEX_M_USB_FS_GINTMSK, 0, USB_FS_GINTMSK_RXFLVLM);
+	set_reg(r_CORTEX_M_USB_FS_GINTMSK, 0, USB_FS_GINTMSK_RXFLVLM);
 
  	/* 1. Read the Receive status pop register */
     	grxstsp = read_reg_value(r_CORTEX_M_USB_FS_GRXSTSP);
@@ -994,7 +1000,7 @@ static void rxflvl_handler(void)
 	bcnt = (grxstsp & 0x7ff0) >> 4;     // FIXME we should define a macro
 	epnum = grxstsp & 0xf;       // FIXME we should define a macro
 	size = 0;
-	//printf("EP:%d, PKTSTS:%x, BYTES_COUNT:%x,  DATA_PID:%x\n", epnum, pktsts, bcnt, dpid);
+	//log_printf("EP:%d, PKTSTS:%x, BYTES_COUNT:%x,  DATA_PID:%x\n", epnum, pktsts, bcnt, dpid);
 
 
     /* 3. If the received packet’s byte count is not 0, the byte count amount of data is popped
@@ -1006,47 +1012,63 @@ static void rxflvl_handler(void)
     if (bcnt != ZERO_LENGTH_PACKET){
 
         /* 4. The receive FIFO’s packet status readout indicates one of the following: */
-	    switch (epnum) {
-	        case USB_FS_DXEPCTL_EP0:
-		        /* b) SETUP packet pattern
-       	         	 *      These data indicate that a SETUP packet for the specified endpoint is now
-       	    	         *      available for reading from the receive FIFO.
-                	 */
-		        if (pktsts == SETUP && bcnt == 0x8 && dpid == 0) {
-			        read_fifo(setup_packet, 8, epnum);
+            switch (epnum) {
+                case USB_FS_DXEPCTL_EP0:
+                {
+                        /* b) SETUP packet pattern
+                         *      These data indicate that a SETUP packet for the specified endpoint is now
+                         *      available for reading from the receive FIFO.
+                         */
+                        if (pktsts == SETUP && bcnt == 0x8 && dpid == 0) {
+                                log_printf("EP0 Setup stage pattern\n");
+                                read_fifo(setup_packet, 8, epnum);
                                                     /* After this, the Data stage begins.
-				                     * A Setup stage done is received,
-				                     * which triggers a Setup interrupt
-				                     */
-		        }
-	                /* c) Setup stage done pattern
-        	        *      These data indicate that the Setup stage for the specified endpoint has completed
-                	*      and the Data stage has started. After this entry is popped from the receive FIFO,
-	                *      the core asserts a Setup interrupt on the specified control OUT endpoint.
-    		        */
-	                if (pktsts == SETUP_Done){
-       		             printf("EP0 Setup stage done pattern\n");
-       		         }
-               		 /* d) Data OUT packet pattern */
-			if (pktsts == DataOUT && bcnt > 0) {
-       		             usb_fs_driver_rcv_out_pkt(buffer_ep0, &buffer_ep0_idx, buffer_ep0_size, bcnt, epnum);
-			}
-			break;
-	        case USB_FS_DXEPCTL_EP1:
-		        assert(buffer_ep1);
-			usb_fs_driver_rcv_out_pkt(buffer_ep1, &buffer_ep1_idx, buffer_ep1_size, bcnt, epnum);
-
-		        break;
-	        default:
-		        printf("RXFLVL on bad EP %d!", epnum);
-	        }
-	    }
+                                                     * A Setup stage done is received,
+                                                     * which triggers a Setup interrupt
+                                                     */
+                        }
+                        /* c) Setup stage done pattern
+                        *      These data indicate that the Setup stage for the specified endpoint has completed
+                        *      and the Data stage has started. After this entry is popped from the receive FIFO,
+                        *      the core asserts a Setup interrupt on the specified control OUT endpoint.
+                        */
+                        if (pktsts == SETUP_Done){
+                             log_printf("EP0 Setup stage done pattern\n");
+                         }
+                         /* d) Data OUT packet pattern */
+                        if (pktsts == DataOUT) {
+                                if(buffer_ep0 != NULL){
+                                        usb_fs_driver_rcv_out_pkt(buffer_ep0, &buffer_ep0_idx, buffer_ep0_size, bcnt, epnum);
+                                }
+                                /* In case of EP0, we have to manually check the completion and call the callback */
+                                if (buffer_ep0_idx == buffer_ep0_size) {
+                                   buffer_ep0 = NULL;
+                                   if (usb_fs_callbacks.data_received_callback) {
+                                        usb_fs_callbacks.data_received_callback(buffer_ep0_idx);
+                                   }
+                                   buffer_ep0_idx = buffer_ep0_size = 0;
+                                }
+                        }
+                        break;
+                }
+                case USB_FS_DXEPCTL_EP1:
+                {
+                    /* Data OUT packet pattern on EP1 */
+                    if (pktsts == DataOUT && bcnt > 0 && buffer_ep1) {
+                        usb_fs_driver_rcv_out_pkt(buffer_ep1, &buffer_ep1_idx, buffer_ep1_size, bcnt, epnum);
+                    }
+                    break;
+                }
+                default:
+                        log_printf("RXFLVL on bad EP %d!", epnum);
+                }
+            }
 
     /* a) Global OUT NAK pattern (triggers an interrupt)
      *      These data indicate that the global OUT NAK bit has taken effect.
      */
     if (pktsts == OUT_NAK){
-        printf("Global OUT NAK pattern on EP%d\n", epnum);
+        log_printf("Global OUT NAK pattern on EP%d\n", epnum);
     }
 
     /* e) Data transfer completed pattern (triggers an interrupt)
@@ -1055,7 +1077,7 @@ static void rxflvl_handler(void)
      *      Transfer Completed interrupt on the specified OUT endpoint.
      */
     if (pktsts == DataOUT){
-        //printf("OUT Data transfer completed pattern on EP%d\n", epnum);
+        log_printf("OUT Data transfer completed pattern on EP%d\n", epnum);
     }
 
 	set_reg(r_CORTEX_M_USB_FS_GINTMSK, 1, USB_FS_GINTMSK_RXFLVLM);
@@ -1185,7 +1207,7 @@ static void ep_init_reset(void)
 	set_reg(r_CORTEX_M_USB_FS_DIEPTXF(USB_FS_DXEPCTL_EP2), USB_FS_TX_FIFO_SZ, USB_FS_DIEPTXF_INEPTXFD);
 
     /* Maximum packet size */
-	set_reg_value(r_CORTEX_M_USB_FS_DIEPCTL(USB_FS_DXEPCTL_EP2), MAX_DATA_PACKET_SIZE, USB_FS_DIEPCTL_MPSIZ_Msk(USB_FS_DXEPCTL_EP2), USB_FS_DIEPCTL_MPSIZ_Pos(USB_FS_DXEPCTL_EP2));
+	set_reg_value(r_CORTEX_M_USB_FS_DIEPCTL(USB_FS_DXEPCTL_EP2), MAX_DATA_PACKET_SIZE(USB_FS_DXEPCTL_EP2), USB_FS_DIEPCTL_MPSIZ_Msk(USB_FS_DXEPCTL_EP2), USB_FS_DIEPCTL_MPSIZ_Pos(USB_FS_DXEPCTL_EP2));
 
     /* Start data toggle */
     set_reg(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP2), 1, USB_FS_DIEPCTL_SD0PID);
@@ -1206,7 +1228,7 @@ static void ep_init_reset(void)
 #else
 
     /* Maximum packet size */
-	set_reg_value(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP1), MAX_DATA_PACKET_SIZE, USB_FS_DOEPCTL_MPSIZ_Msk(USB_FS_DXEPCTL_EP1), USB_FS_DOEPCTL_MPSIZ_Pos(USB_FS_DXEPCTL_EP1));
+	set_reg_value(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP1), MAX_DATA_PACKET_SIZE(USB_FS_DXEPCTL_EP1), USB_FS_DOEPCTL_MPSIZ_Msk(USB_FS_DXEPCTL_EP1), USB_FS_DOEPCTL_MPSIZ_Pos(USB_FS_DXEPCTL_EP1));
 
     /* FIXME Start data toggle */
     set_reg(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP1), 1, USB_FS_DOEPCTL_SD0PID);
@@ -1315,6 +1337,9 @@ static void iepint_handler(void)
         /* Bit 0 XFRC: Transfer completed interrupt */
 		if (diepint0 & USB_FS_DIEPINT_XFRC_Msk) {
 			set_reg_bits(r_CORTEX_M_USB_FS_DIEPINT(USB_FS_DXEPCTL_EP0), USB_FS_DIEPINT_XFRC_Msk);
+                        if (usb_fs_callbacks.data_sent_callback){
+                                usb_fs_callbacks.data_sent_callback();
+                        }
 		}
     }
 
@@ -1369,52 +1394,42 @@ static void iepint_handler(void)
  */
 static void oepint_handler(void)
 {
+        uint32_t daint = read_reg_value(r_CORTEX_M_USB_FS_DAINT);
 
-	uint32_t daint = read_reg_value(r_CORTEX_M_USB_FS_DAINT);
+        if (daint & USB_FS_DAINT_OEPINT(USB_FS_DXEPCTL_EP0)) {
+                uint32_t doepint0 = read_reg_value(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP0));
+                if (doepint0 & USB_FS_DOEPINT_STUP_Msk) {
+                        /* We can process the received SETUP Packet (RM0090 p1357) */
+                        set_reg_bits(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP0), USB_FS_DOEPINT_STUP_Msk);
+                        struct usb_setup_packet stp_packet = {
+                                setup_packet[0],
+                                setup_packet[1],
+                                setup_packet[3] << 8 | setup_packet[2],
+                                setup_packet[5] << 8 | setup_packet[4],
+                                setup_packet[7] << 8 | setup_packet[6]
+                        };
+                        /* Inform the upper layer that a setup packet is available */
+                        usb_ctrl_handler(&stp_packet);
+                }
+                if (doepint0 & USB_FS_DOEPINT_XFRC_Msk) {
+                        set_reg_bits(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP0), USB_FS_DOEPINT_XFRC_Msk);
+                }
+        }
+        if (daint & USB_FS_DAINT_OEPINT(USB_FS_DXEPCTL_EP1)) {
+                uint32_t doepint1 = read_reg_value(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP1));
+                if (doepint1 & USB_FS_DOEPINT_XFRC_Msk) {
+                        set_reg_bits(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP1), USB_FS_DOEPINT_XFRC_Msk);
+                        set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP1), USB_FS_DOEPCTL_SNAK_Msk); // WHERE in the datasheet ? In disabling an OUT ep (p1360)
+                        buffer_ep1 = NULL;
+                        if (usb_fs_callbacks.data_received_callback) {
+                                usb_fs_callbacks.data_received_callback(buffer_ep1_idx);
+                        }
+                        set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP0), USB_FS_DOEPCTL_CNAK_Msk);
+                        buffer_ep1_idx = 0;
+                }
+        }
 
-	if (daint & USB_FS_DAINT_OEPINT(USB_FS_DXEPCTL_EP0)) {
-		uint32_t doepint0 = read_reg_value(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP0));
-		if (doepint0 & USB_FS_DOEPINT_STUP_Msk) {
-			/* We can process the received SETUP Packet (RM0090 p1357) */
-			set_reg_bits(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP0), USB_FS_DOEPINT_STUP_Msk);
-			struct usb_setup_packet stp_packet = {
-				setup_packet[0],
-				setup_packet[1],
-				setup_packet[3] << 8 | setup_packet[2],
-				setup_packet[5] << 8 | setup_packet[4],
-				setup_packet[7] << 8 | setup_packet[6]
-			};
-            		/* Inform the upper layer that a setup packet is available */
-			usb_ctrl_handler(&stp_packet);
-		}
-		if (doepint0 & USB_FS_DOEPINT_XFRC_Msk) {
-			set_reg_bits(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP0), USB_FS_DOEPINT_XFRC_Msk);
-			if (buffer_ep0_idx > 0) {
-				set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP0), USB_FS_DOEPCTL_SNAK_Msk);
-				buffer_ep0 = NULL;
-				if (usb_fs_callbacks.data_received_callback){
-					usb_fs_callbacks.data_received_callback(buffer_ep0_idx);
-				}
-                		set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP0), USB_FS_DOEPCTL_CNAK_Msk);
-				buffer_ep0_idx = 0;
-			}
-		}
-	}
-	if (daint & USB_FS_DAINT_OEPINT(USB_FS_DXEPCTL_EP1)) {
-		uint32_t doepint1 = read_reg_value(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP1));
-		if (doepint1 & USB_FS_DOEPINT_XFRC_Msk) {
-			set_reg_bits(r_CORTEX_M_USB_FS_DOEPINT(USB_FS_DXEPCTL_EP1), USB_FS_DOEPINT_XFRC_Msk);
-			set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP1), USB_FS_DOEPCTL_SNAK_Msk); // WHERE in the datasheet ? In disabling an OUT ep (p1360)
-			buffer_ep1 = NULL;
-			if (usb_fs_callbacks.data_received_callback) {
-				usb_fs_callbacks.data_received_callback(buffer_ep1_idx);
-			}
-            		set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP0), USB_FS_DOEPCTL_CNAK_Msk);
-			buffer_ep1_idx = 0;
-		}
-	}
-
-	set_reg(r_CORTEX_M_USB_FS_GINTMSK, 1, USB_FS_GINTMSK_OEPINT);
+        set_reg(r_CORTEX_M_USB_FS_GINTMSK, 1, USB_FS_GINTMSK_OEPINT);
 }
 
 /**
@@ -1428,7 +1443,7 @@ static void default_handler(uint8_t i)
 	case USB_FS_GINTSTS_SOF_Pos:
 		break;
 	default:
-		printf("[USB FS] Unhandled int %d\n", i);
+		log_printf("[USB FS] Unhandled int %d\n", i);
 	}
 }
 
@@ -1459,7 +1474,7 @@ void OTG_FS_IRQHandler(uint8_t irq __UNUSED, // IRQ number
 
     count++;
 	if (intsts & USB_FS_GINTSTS_CMOD_Msk){
-//		printf("[USB FS] Int in Host mode !\n");
+//		log_printf("[USB FS] Int in Host mode !\n");
 //		not in ISR mode!
 	}
     uint32_t val = intsts;
@@ -1552,7 +1567,7 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
 	//disable_irq();
 
 	if (needed_words > USB_FS_TX_FIFO_SZ){
-		printf("needed_words > %d", USB_FS_TX_FIFO_SZ);
+		log_printf("needed_words > %d", USB_FS_TX_FIFO_SZ);
 	}
 
 	while (get_reg(r_CORTEX_M_USB_FS_DTXFSTS(ep), USB_FS_DTXFSTS_INEPTFSAV) < needed_words){
@@ -1632,7 +1647,7 @@ void usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep)
     /* Program the transfer size and packet count as follows:
      *      xfersize = N * maxpacket + short_packet pktcnt = N + (short_packet exist ? 1 : 0)
      */
-    packet_count = size / MAX_DATA_PACKET_SIZE + (size & (MAX_DATA_PACKET_SIZE-1) ? 1 : 0);
+    packet_count = size / MAX_DATA_PACKET_SIZE(ep) + (size & (MAX_DATA_PACKET_SIZE(ep)-1) ? 1 : 0);
 
     /* 1. Program the OTG_FS_DIEPTSIZx register for the transfer size and the corresponding packet count. */
     set_reg_value(r_CORTEX_M_USB_FS_DIEPTSIZ(ep), packet_count, USB_FS_DIEPTSIZ_PKTCNT_Msk(ep), USB_FS_DIEPTSIZ_PKTCNT_Pos(ep));
@@ -1665,34 +1680,44 @@ void usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep)
  */
 void usb_fs_driver_read(void *dst, uint32_t size, uint8_t ep)
 {
-	if (ep == USB_FS_DXEPCTL_EP0 && dst != NULL) {
-		assert(!buffer_ep0);
-		buffer_ep0 = dst;
-		buffer_ep0_idx = 0;
-		buffer_ep0_size = size;
+        if (ep == USB_FS_DXEPCTL_EP0 && dst != NULL) {
+                /* For EP0, we have to monitor each packet since we are limited to 64 bytes for data */
+                assert(dst);
+                assert(!buffer_ep0);
+                buffer_ep0 = dst;
+                buffer_ep0_idx = 0;
+                buffer_ep0_size = size;
+                /* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ... 
+                 * Handling the completion in rxflvl is a better choice.
+                 */
+        }
+        if (ep == USB_FS_DXEPCTL_EP0 && dst == NULL) {
+                buffer_ep0 = NULL;
+                buffer_ep0_idx = buffer_ep0_size = 0;
+                /* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ... 
+                 * Handling the completion in rxflvl is a better choice.
+                 */
+        }
+        if (ep == USB_FS_DXEPCTL_EP1) {
+                if(dst != NULL){
+                        assert(dst);
+                        assert(!buffer_ep1);
+                        buffer_ep1 = dst;
+                        buffer_ep1_idx = 0;
+                        buffer_ep1_size = size;
+                }
+                else{
+                        buffer_ep1 = NULL;
+                        buffer_ep1_idx = buffer_ep1_size = 0;
+                }
+                /* Set the packet count number in the PKTCNT field */
+                uint32_t packet_count = size / MAX_DATA_PACKET_SIZE(ep) + (size & (MAX_DATA_PACKET_SIZE(ep)-1) ? 1 : 0);
+                set_reg_value(r_CORTEX_M_USB_FS_DOEPTSIZ(ep), packet_count, USB_FS_DOEPTSIZ_PKTCNT_Msk(ep), USB_FS_DOEPTSIZ_PKTCNT_Pos(ep));
+                /* Set the size in the XFRSIZ field */
+                set_reg_value(r_CORTEX_M_USB_FS_DOEPTSIZ(ep), size, USB_FS_DOEPTSIZ_XFRSIZ_Msk(ep), USB_FS_DOEPTSIZ_XFRSIZ_Pos(ep));
 
-//	uint32_t packet_count = size / MAX_DATA_PACKET_SIZE + (size & (MAX_DATA_PACKET_SIZE-1) ? 1 : 0);
-//	set_reg_value(r_CORTEX_M_USB_FS_DOEPTSIZ(ep), packet_count, USB_FS_DOEPTSIZ_PKTCNT_Msk(ep), USB_FS_DOEPTSIZ_PKTCNT_Pos(ep));
-
-
-	}
-
-	if (ep == USB_FS_DXEPCTL_EP1 && dst != NULL) {
-		assert(dst);
-		assert(!buffer_ep1);
-		buffer_ep1 = dst;
-		buffer_ep1_idx = 0;
-		buffer_ep1_size = size;
-	}
-
-	/* Set the packet count number in the PKTCNT field */
-	uint32_t packet_count = size / MAX_DATA_PACKET_SIZE + (size & (MAX_DATA_PACKET_SIZE-1) ? 1 : 0);
-	set_reg_value(r_CORTEX_M_USB_FS_DOEPTSIZ(ep), packet_count, USB_FS_DOEPTSIZ_PKTCNT_Msk(ep), USB_FS_DOEPTSIZ_PKTCNT_Pos(ep));
-	/* Set the size in the XFRSIZ field */
-	set_reg_value(r_CORTEX_M_USB_FS_DOEPTSIZ(ep), size, USB_FS_DOEPTSIZ_XFRSIZ_Msk(ep), USB_FS_DOEPTSIZ_XFRSIZ_Pos(ep));
-
-	set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(ep), USB_FS_DOEPCTL_CNAK_Msk);
-
+        }
+        set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(ep), USB_FS_DOEPCTL_CNAK_Msk);
 }
 
 /**
