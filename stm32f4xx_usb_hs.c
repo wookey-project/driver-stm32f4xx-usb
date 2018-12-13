@@ -1395,6 +1395,7 @@ static void ep_init_enum(void)
  * • Timeout condition detected (control-in only)
  * • Isochronous out packet has been dropped, without generating an interrupt
  */
+static volatile unsigned int ep0_last_packet_sent = 0;
 static void iepint_handler(void)
 {
     /*  read the device all endpoints interrupt (OTG_HS_DAINT) register to get the exact endpoint number
@@ -1435,9 +1436,12 @@ static void iepint_handler(void)
         /* Bit 0 XFRC: Transfer completed interrupt */
 		if (diepint0 & USB_HS_DIEPINT_XFRC_Msk) {
 			set_reg_bits(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP0), USB_HS_DIEPINT_XFRC_Msk);
-                        if (usb_hs_callbacks.data_sent_callback){
-                        	usb_hs_callbacks.data_sent_callback();
-                        }
+			/* Our callback */
+			if(ep0_last_packet_sent == 1){
+	        	       	if (usb_hs_callbacks.data_sent_callback){
+		        	       	usb_hs_callbacks.data_sent_callback();
+                		}
+			}
 		}
         }
 
@@ -1727,7 +1731,7 @@ void usb_hs_driver_send_zlp(uint8_t ep){
  * @param size Size of data
  * @param ep Endpoint used
  */
-void usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
+static void _usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
 {
     uint32_t packet_count = 0;
     /* FIXME Only sending data from IN endpoints is implemented */
@@ -1759,6 +1763,33 @@ void usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
     //FIXME activate TXEMPTY intrrupt in DIEPEMPMSK register
 }
 
+void usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
+{
+	if((ep == USB_HS_DXEPCTL_EP0) && (src != NULL)){
+		/* Special handling for EP0 to split sending across multiple packets */
+		unsigned int i;
+	    	uint32_t packet_count = 0;
+    		packet_count = size / MAX_DATA_PACKET_SIZE(ep);
+		ep0_last_packet_sent = 0;
+		for(i = 0; i < packet_count; i++){
+			if((size == (packet_count * MAX_DATA_PACKET_SIZE(ep))) && (i == packet_count-1)){
+				ep0_last_packet_sent = 1;
+			}
+			_usb_hs_driver_send(src+(i*MAX_DATA_PACKET_SIZE(ep)), MAX_DATA_PACKET_SIZE(ep), ep);
+		}
+		if(size != (packet_count * MAX_DATA_PACKET_SIZE(ep))){
+			ep0_last_packet_sent = 1;
+			_usb_hs_driver_send(src+(packet_count*MAX_DATA_PACKET_SIZE(ep)), size - (packet_count*MAX_DATA_PACKET_SIZE(ep)), ep);
+		}
+	}
+	else if((ep == USB_HS_DXEPCTL_EP0) && (src == NULL)){
+		ep0_last_packet_sent = 1;
+		_usb_hs_driver_send(src, size, ep);
+	}
+	else{
+		_usb_hs_driver_send(src, size, ep);
+	}
+}
 /**
  * \brief Function to handle read call.
  *
