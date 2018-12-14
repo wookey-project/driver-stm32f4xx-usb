@@ -1674,6 +1674,7 @@ void _usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep)
 
 void usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep)
 {
+        /* FIXME/TODO: it would be cleaner to monitor TXEMPTY here */
         if((ep == USB_FS_DXEPCTL_EP0) && (src != NULL)){
                 /* Special handling for EP0 to split sending across multiple packets */
                 unsigned int i;
