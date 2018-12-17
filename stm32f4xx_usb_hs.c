@@ -1396,6 +1396,7 @@ static void ep_init_enum(void)
  * • Isochronous out packet has been dropped, without generating an interrupt
  */
 static volatile unsigned int ep0_last_packet_sent = 0;
+static volatile unsigned int ep0_packets_sent = 0;
 static void iepint_handler(void)
 {
     /*  read the device all endpoints interrupt (OTG_HS_DAINT) register to get the exact endpoint number
@@ -1404,7 +1405,6 @@ static void iepint_handler(void)
 	uint32_t daint = read_reg_value(r_CORTEX_M_USB_HS_DAINT);
 	if (daint & USB_HS_DAINT_IEPINT(USB_HS_DXEPCTL_EP0)) {
 		uint32_t diepint0 = read_reg_value(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP0));
-
         /* Bit 7 TXFE: Transmit FIFO empty */
 		if (diepint0 & USB_HS_DIEPINT_TOC_Msk) {
 			set_reg_bits(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP0), USB_HS_DIEPINT_TXFE_Msk);
@@ -1436,6 +1436,7 @@ static void iepint_handler(void)
         /* Bit 0 XFRC: Transfer completed interrupt */
 		if (diepint0 & USB_HS_DIEPINT_XFRC_Msk) {
 			set_reg_bits(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP0), USB_HS_DIEPINT_XFRC_Msk);
+			ep0_packets_sent = 1;
 			/* Our callback */
 			if(ep0_last_packet_sent == 1){
 	        	       	if (usb_hs_callbacks.data_sent_callback){
@@ -1637,12 +1638,6 @@ static void usb_hs_init_isr_handlers(void)
 /**
  * \brief function to write data on FIFO
  *
- * Can only send 128B !
- * " The non-periodic transmit FIFO can hold two packets
- * (128 bytes for FS) "
- * See section 34.17.4 p1340 (RM0090 docID018909 Rev 13)
- * (% 4 == & 3)
- *
  * The application must ensure that at least one free space is available in the periodic/non-periodic
  * request queue before starting to write to the transmit FIFO.
  * The application must always write to the transmit FIFO in DWORDs.
@@ -1659,22 +1654,25 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
 	uint32_t needed_words = size / 4 + (size & 3 ? 1 : 0);
 	uint32_t i;
 
-    // FIXME: IP should has its own interrupts disable during ISR execution
-    uint32_t oldmask = read_reg_value(r_CORTEX_M_USB_HS_GINTMSK);
-    set_reg_value(r_CORTEX_M_USB_HS_GINTMSK, 0, 0xffffffff, 0);
-	//disable_irq();
-
 	if (needed_words > USB_HS_TX_FIFO_SZ){
 		log_printf("needed_words > %d", USB_HS_TX_FIFO_SZ);
 	}
 
 	while (get_reg(r_CORTEX_M_USB_HS_DTXFSTS(ep), USB_HS_DTXFSTS_INEPTFSAV) < needed_words){
-		continue;
+		/* Are we suspended? */
+		if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
+			return;
+		}
 	}
 
-	for (i = 0; i < size_4bytes; i++, src += 4)
+        // FIXME: IP should has its own interrupts disable during ISR execution
+        uint32_t oldmask = read_reg_value(r_CORTEX_M_USB_HS_GINTMSK);
+        set_reg_value(r_CORTEX_M_USB_HS_GINTMSK, 0, 0xffffffff, 0);
+	//disable_irq();
+	
+	for (i = 0; i < size_4bytes; i++, src += 4){
 		write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint32_t *)src);
-
+	}
 	switch (size & 3) {
 	case 1:
 		write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint8_t *)src);
@@ -1689,12 +1687,13 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
 		break;
 	}
 
+        // FIXME: IP should has its own interrupts disable during ISR execution
 	//enable_irq();
-    set_reg_value(r_CORTEX_M_USB_HS_GINTMSK, oldmask, 0xffffffff, 0);
+ 	set_reg_value(r_CORTEX_M_USB_HS_GINTMSK, oldmask, 0xffffffff, 0);
 }
 
 
-/* Split the data to send in 128 bytes max packets */
+/* Split the data to send in max TXFIFO size packets */
 static void write_fifo(const void *src, uint32_t size, uint8_t ep)
 {
 	unsigned int i;
@@ -1760,6 +1759,10 @@ static void _usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
     *     only after getting transfer complete for the previous transaction.
     */
     write_fifo(src, size, ep);
+    /* Are we suspended */
+    if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
+        return;
+    }
     //FIXME activate TXEMPTY intrrupt in DIEPEMPMSK register
 }
 
@@ -1776,11 +1779,28 @@ void usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
 			if((size == (packet_count * MAX_DATA_PACKET_SIZE(ep))) && (i == packet_count-1)){
 				ep0_last_packet_sent = 1;
 			}
+			ep0_packets_sent = 0;
 			_usb_hs_driver_send(src+(i*MAX_DATA_PACKET_SIZE(ep)), MAX_DATA_PACKET_SIZE(ep), ep);
+			if(((size == (packet_count * MAX_DATA_PACKET_SIZE(ep))) && (i != packet_count-1)) ||
+			    (size != (packet_count * MAX_DATA_PACKET_SIZE(ep)))){
+				/* For all the intermediate packets except the last one:
+				 * wait with host hang up detection
+				 */
+				while(ep0_packets_sent == 0){
+					/* Are we suspended? */
+    					if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
+						break;
+					}
+				}
+			}
 		}
 		if(size != (packet_count * MAX_DATA_PACKET_SIZE(ep))){
+			/* Residual data to send */
 			ep0_last_packet_sent = 1;
 			_usb_hs_driver_send(src+(packet_count*MAX_DATA_PACKET_SIZE(ep)), size - (packet_count*MAX_DATA_PACKET_SIZE(ep)), ep);
+		}
+		if(packet_count > 0){
+            		set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP0), USB_HS_DOEPCTL_CNAK_Msk);
 		}
 	}
 	else if((ep == USB_HS_DXEPCTL_EP0) && (src == NULL)){
@@ -1790,6 +1810,14 @@ void usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
 	else{
 		_usb_hs_driver_send(src, size, ep);
 	}
+	/* If we are suspended, call ourself the callback and flush stuff */
+    	if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
+		usb_hs_driver_TXFIFO_flush_all();
+	      	if (usb_hs_callbacks.data_sent_callback){
+	     	       	usb_hs_callbacks.data_sent_callback();
+        	}
+	}
+	
 }
 /**
  * \brief Function to handle read call.

@@ -253,6 +253,8 @@
 #define USB_FS_DCFG_DAD_Msk     ((uint32_t)0x7f << USB_FS_DCFG_DAD_Pos)
 
 /* Device status register */
+#define USB_FS_DSTS_SUSPSTS_Pos    0
+#define USB_FS_DSTS_SUSPSTS_Msk    ((uint32_t)1 << USB_FS_DSTS_SUSPSTS_Pos)
 #define USB_FS_DSTS_ENUMSPD_Pos     1
 #define USB_FS_DSTS_ENUMSPD_Msk     ((uint32_t)0x3 << USB_FS_DSTS_ENUMSPD_Pos)
 #define USB_FS_DSTS_ENUMSPD_FS      ((uint8_t)3)

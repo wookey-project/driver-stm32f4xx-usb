@@ -19,8 +19,6 @@
  */
 #include "stm32f4xx_usb_fs.h"
 
-//#include "stm32f4xx_gpio_goodusb.h"
-//#include "stm32f4xx_nvic.h"
 #include "stm32f4xx_usb_fs.h"
 #include "stm32f4xx_usb_fs_regs.h"
 #include "api/usb_control.h"
@@ -102,6 +100,21 @@ static usb_ep_error_t usb_fs_driver_TXFIFO_flush(uint8_t ep){
     return 0;
 }
 
+
+static usb_ep_error_t usb_fs_driver_TXFIFO_flush_all(void){
+        unsigned int ep;
+        usb_ep_error_t ret;
+
+        /* [RB]: FIXME: put a macro defining the number of endpoints */
+        for(ep = 0; ep < 4; ep++){
+                if((ret = usb_fs_driver_TXFIFO_flush(ep)) != USB_OK){
+                        return ret;
+                }
+        }
+        return USB_OK;
+}
+
+
 static usb_ep_error_t usb_fs_driver_RXFIFO_flush(void){
     uint32_t count = 0;
 	/* Select which ep to flush and do it
@@ -132,6 +145,7 @@ static usb_ep_error_t usb_fs_driver_RXFIFO_flush(void){
     }
     return 0;
 }
+
 
 
 void usb_fs_driver_device_connect(void){
@@ -1297,6 +1311,7 @@ static void ep_init_enum(void)
  * • Isochronous out packet has been dropped, without generating an interrupt
  */
 static volatile unsigned int ep0_last_packet_sent = 0;
+static volatile unsigned int ep0_packets_sent = 0;
 static void iepint_handler(void)
 {
     /*  read the device all endpoints interrupt (OTG_FS_DAINT) register to get the exact endpoint number
@@ -1338,6 +1353,7 @@ static void iepint_handler(void)
         /* Bit 0 XFRC: Transfer completed interrupt */
 		if (diepint0 & USB_FS_DIEPINT_XFRC_Msk) {
 			set_reg_bits(r_CORTEX_M_USB_FS_DIEPINT(USB_FS_DXEPCTL_EP0), USB_FS_DIEPINT_XFRC_Msk);
+                        ep0_packets_sent = 1;
                         /* Our callback */
                         if(ep0_last_packet_sent == 1){
                                 if (usb_fs_callbacks.data_sent_callback){
@@ -1565,22 +1581,25 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
 	uint32_t needed_words = size / 4 + (size & 3 ? 1 : 0);
 	uint32_t i;
 
-    // FIXME: IP should has its own interrupts disable during ISR execution
-    uint32_t oldmask = read_reg_value(r_CORTEX_M_USB_FS_GINTMSK);
-    set_reg_value(r_CORTEX_M_USB_FS_GINTMSK, 0, 0xffffffff, 0);
-	//disable_irq();
-
 	if (needed_words > USB_FS_TX_FIFO_SZ){
 		log_printf("needed_words > %d", USB_FS_TX_FIFO_SZ);
 	}
 
-	while (get_reg(r_CORTEX_M_USB_FS_DTXFSTS(ep), USB_FS_DTXFSTS_INEPTFSAV) < needed_words){
-		continue;
-	}
+        while (get_reg(r_CORTEX_M_USB_FS_DTXFSTS(ep), USB_FS_DTXFSTS_INEPTFSAV) < needed_words){
+                /* Are we suspended? */
+                if(get_reg(r_CORTEX_M_USB_FS_DSTS, USB_FS_DSTS_SUSPSTS)){
+                        return;
+                }
+        }
 
-	for (i = 0; i < size_4bytes; i++, src += 4)
+        // FIXME: IP should has its own interrupts disable during ISR execution
+        uint32_t oldmask = read_reg_value(r_CORTEX_M_USB_FS_GINTMSK);
+        set_reg_value(r_CORTEX_M_USB_FS_GINTMSK, 0, 0xffffffff, 0);
+	//disable_irq();
+
+	for (i = 0; i < size_4bytes; i++, src += 4){
 		write_reg_value(USB_FS_DEVICE_FIFO(ep), *(uint32_t *)src);
-
+	}
 	switch (size & 3) {
 	case 1:
 		write_reg_value(USB_FS_DEVICE_FIFO(ep), *(uint8_t *)src);
@@ -1595,10 +1614,9 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
 		break;
 	}
 
-    // FIXME: IP should has its own interrupts disable during ISR execution
+        // FIXME: IP should has its own interrupts disable during ISR execution
 	//enable_irq();
-    //
-    set_reg_value(r_CORTEX_M_USB_FS_GINTMSK, oldmask, 0xffffffff, 0);
+        set_reg_value(r_CORTEX_M_USB_FS_GINTMSK, oldmask, 0xffffffff, 0);
 }
 
 
@@ -1669,6 +1687,10 @@ void _usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep)
     *     only after getting transfer complete for the previous transaction.
     */
     write_fifo(src, size, ep);
+    /* Are we suspended */
+    if(get_reg(r_CORTEX_M_USB_FS_DSTS, USB_FS_DSTS_SUSPSTS)){
+        return;
+    }
     //FIXME activate TXEMPTY intrrupt in DIEPEMPMSK register
 }
 
@@ -1685,11 +1707,29 @@ void usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep)
                         if((size == (packet_count * MAX_DATA_PACKET_SIZE(ep))) && (i == packet_count-1)){
                                 ep0_last_packet_sent = 1;
                         }
+                        ep0_packets_sent = 0;
                         _usb_fs_driver_send(src+(i*MAX_DATA_PACKET_SIZE(ep)), MAX_DATA_PACKET_SIZE(ep), ep);
+                        if(((size == (packet_count * MAX_DATA_PACKET_SIZE(ep))) && (i != packet_count-1)) ||
+                            (size != (packet_count * MAX_DATA_PACKET_SIZE(ep)))){
+                                /* For all the intermediate packets except the last one:
+                                 * wait with timeout (the host might be gone ...)
+                                 * FIXME: find a better way to handle timeout
+                                 */
+                                while(ep0_packets_sent == 0){
+                                        /* Are we suspended? */
+                                        if(get_reg(r_CORTEX_M_USB_FS_DSTS, USB_FS_DSTS_SUSPSTS)){
+                                                break;
+                                        }
+                                }
+                        }
                 }
                 if(size != (packet_count * MAX_DATA_PACKET_SIZE(ep))){
+                        /* Residual data to send */
                         ep0_last_packet_sent = 1;
                         _usb_fs_driver_send(src+(packet_count*MAX_DATA_PACKET_SIZE(ep)), size - (packet_count*MAX_DATA_PACKET_SIZE(ep)), ep);
+                }
+                if(packet_count > 0){
+                        set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP0), USB_FS_DOEPCTL_CNAK_Msk);
                 }
         }
         else if((ep == USB_FS_DXEPCTL_EP0) && (src == NULL)){
@@ -1699,8 +1739,15 @@ void usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep)
         else{
                 _usb_fs_driver_send(src, size, ep);
         }
-}
+        /* If we are suspended, call ourself the callback and flush stuff */
+        if(get_reg(r_CORTEX_M_USB_FS_DSTS, USB_FS_DSTS_SUSPSTS)){
+                usb_fs_driver_TXFIFO_flush_all();
+                if (usb_fs_callbacks.data_sent_callback){
+                        usb_fs_callbacks.data_sent_callback();
+                }
+        }
 
+}
 
 /**
  * \brief Function to handle read call.
