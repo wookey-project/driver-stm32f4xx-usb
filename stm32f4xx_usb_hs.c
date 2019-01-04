@@ -970,6 +970,7 @@ static void _read_fifo(volatile uint8_t *dest, volatile uint32_t size, uint8_t e
 
 	uint32_t i = 0;
 	uint32_t size_4bytes = size / 4;
+    uint32_t tmp;
 
     uint32_t oldmask = read_reg_value(r_CORTEX_M_USB_HS_GINTMSK);
     set_reg_value(r_CORTEX_M_USB_HS_GINTMSK, 0, 0xffffffff, 0);
@@ -987,7 +988,10 @@ static void _read_fifo(volatile uint8_t *dest, volatile uint32_t size, uint8_t e
 		*(uint16_t *)dest = *USB_HS_DEVICE_FIFO(ep) & 0xffff;
 		break;
 	case 3:
-		*(uint32_t *)dest = *USB_HS_DEVICE_FIFO(ep) & 0xffffff;
+		tmp = *USB_HS_DEVICE_FIFO(ep);
+		dest[0] = tmp & 0xff;
+		dest[1] = (tmp >> 8) & 0xff;
+		dest[2] = (tmp >> 16) & 0xff;
 		break;
 	default:
 		break;
@@ -1652,6 +1656,7 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
 {
 	uint32_t size_4bytes = size / 4;
 	uint32_t needed_words = size / 4 + (size & 3 ? 1 : 0);
+    uint32_t tmp;
 	uint32_t i;
 
 	if (needed_words > USB_HS_TX_FIFO_SZ){
@@ -1681,7 +1686,10 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
 		write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint16_t *)src);
 		break;
 	case 3:
-		write_reg_value(USB_HS_DEVICE_FIFO(ep), (*(uint32_t *)src) & 0xffffff);
+        tmp  = ((uint8_t*) src)[0];
+        tmp |= ((uint8_t*) src)[1] << 8;
+        tmp |= ((uint8_t*) src)[2] << 16;
+		write_reg_value(USB_HS_DEVICE_FIFO(ep), tmp);
 		break;
 	default:
 		break;
