@@ -1613,10 +1613,10 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
 		write_reg_value(USB_FS_DEVICE_FIFO(ep), *(uint16_t *)src);
 		break;
 	case 3:
-        tmp  = ((uint8_t*) src)[0];
-        tmp |= ((uint8_t*) src)[1] << 8;
-        tmp |= ((uint8_t*) src)[2] << 16;
-		write_reg_value(USB_HS_DEVICE_FIFO(ep), tmp);
+		tmp  = ((uint8_t*) src)[0];
+		tmp |= ((uint8_t*) src)[1] << 8;
+		tmp |= ((uint8_t*) src)[2] << 16;
+		write_reg_value(USB_FS_DEVICE_FIFO(ep), tmp);
 		break;
 	default:
 		break;
