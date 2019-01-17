@@ -57,7 +57,7 @@ static volatile uint32_t buffer_ep1_size;
 #define USB_MAX_ISR 32
 
 /******* Helpers to handle delays *****************/
-/* [RB] FIXME: these are quick and dirty ways of 'delaying', 
+/* [RB] FIXME: these are quick and dirty ways of 'delaying',
  * we should migrate to cleaner ways asap ...
  */
 
@@ -200,7 +200,7 @@ void usb_hs_driver_map(void)
 
 static uint8_t usb_device_early_init(void) {
 
-    const uint8_t d_pin[7] = { 
+    const uint8_t d_pin[7] = {
       ULPI_D1_PIN,
       ULPI_D2_PIN,
       ULPI_D7_PIN,
@@ -749,7 +749,7 @@ void usb_otg_hs_core_init(void)
 	reg_value = read_reg_value(r_CORTEX_M_USB_HS_GUSBCFG);
 	/* Use the internal VBUS */
 	clear_reg_bits(&reg_value, USB_HS_GUSBCFG_ULPIEVBUSD_Msk);
-	/* Data line pulsing using utmi_txvalid */	
+	/* Data line pulsing using utmi_txvalid */
 	clear_reg_bits(&reg_value, USB_HS_GUSBCFG_TSDPS_Msk);
 	/* ULPI interface selection */
 	set_reg_bits(&reg_value, USB_HS_GUSBCFG_UTMISEL_Msk);
@@ -769,7 +769,7 @@ void usb_otg_hs_core_init(void)
 	/**** TODO: DMA enable when necessary ****/
 
 
-	/**** TODO: optional OTG mode needs additional init *****/ 
+	/**** TODO: optional OTG mode needs additional init *****/
 }
 
 
@@ -873,7 +873,7 @@ void usb_otg_hs_device_init(void)
 	/**** Restart the PHY clock *******/
 	write_reg_value(r_CORTEX_M_USB_HS_PCGCCTL, 0);
 
-	/**** Device configuration register ******/	
+	/**** Device configuration register ******/
 	set_reg(r_CORTEX_M_USB_HS_DCFG, USB_HS_DCFG_PFIVL_INTERVAL_80, USB_HS_DCFG_PFIVL);
 
 	/**** Flush the FIFOs ****/
@@ -895,7 +895,7 @@ void usb_otg_hs_device_init(void)
 //                                                USB_HS_GINTMSK_SOFM_Msk     | /* Unmask Start of frame */
                                                 USB_HS_GINTMSK_OEPINT_Msk   | /* FIXME Unmask OUT endpoints interrupt */
                                                 USB_HS_GINTMSK_IEPINT_Msk   |
-						USB_HS_GINTMSK_RXFLVLM_Msk); 
+						USB_HS_GINTMSK_RXFLVLM_Msk);
 
 
 }
@@ -921,11 +921,25 @@ static void usb_otg_hs_ulpi_hard_reset(void)
 	delay_ms(5);
 	sys_cfg(CFG_GPIO_SET, (uint8_t)((('E' - 'A') << 4) + 13), 0);
 }
+static void placeholder_data_received(uint32_t dummy __attribute__((unused)))
+{
+}
+
+static void placeholder_data_sent(void)
+{
+}
 
 void usb_hs_driver_early_init(void (*data_received)(uint32_t), void (*data_sent)(void))
 {
-	usb_hs_callbacks.data_sent_callback = data_sent;
-	usb_hs_callbacks.data_received_callback = data_received;
+	if(data_sent)
+          usb_hs_callbacks.data_sent_callback = data_sent;
+        else
+          usb_hs_callbacks.data_sent_callback = placeholder_data_sent;
+
+        if(data_received)
+	  usb_hs_callbacks.data_received_callback = data_received;
+        else
+	  usb_hs_callbacks.data_received_callback = placeholder_data_received;
 
 	usb_device_early_init();
 
@@ -1119,58 +1133,58 @@ static void rxflvl_handler(void)
     if (bcnt != ZERO_LENGTH_PACKET){
 
         /* 4. The receive FIFO’s packet status readout indicates one of the following: */
-	    switch (epnum) {
-	        case USB_HS_DXEPCTL_EP0:
-		{
-		        /* b) SETUP packet pattern
-       	         	 *      These data indicate that a SETUP packet for the specified endpoint is now
-       	    	         *      available for reading from the receive FIFO.
-                	 */
-		        if (pktsts == SETUP && bcnt == 0x8 && dpid == 0) {
-                    		log_printf("EP0 Setup stage pattern\n");
-	                        read_fifo(setup_packet, 8, epnum);
-                                                    /* After this, the Data stage begins.
-				                     * A Setup stage done is received,
-				                     * which triggers a Setup interrupt
-				                     */
-		        }
-	                /* c) Setup stage done pattern
-        	        *      These data indicate that the Setup stage for the specified endpoint has completed
-                	*      and the Data stage has started. After this entry is popped from the receive FIFO,
-	                *      the core asserts a Setup interrupt on the specified control OUT endpoint.
-    		        */
-	                if (pktsts == SETUP_Done){
-       		             log_printf("EP0 Setup stage done pattern\n");
-       		         }
-               		 /* d) Data OUT packet pattern */
-			if (pktsts == DataOUT) {
-				if(buffer_ep0 != NULL){
-       		             		usb_hs_driver_rcv_out_pkt(buffer_ep0, &buffer_ep0_idx, buffer_ep0_size, bcnt, epnum);
-				}
-                      		/* In case of EP0, we have to manually check the completion and call the callback */
+        switch (epnum) {
+            case USB_HS_DXEPCTL_EP0:
+                {
+                    /* b) SETUP packet pattern
+                     *      These data indicate that a SETUP packet for the specified endpoint is now
+                     *      available for reading from the receive FIFO.
+                     */
+                    if (pktsts == SETUP && bcnt == 0x8 && dpid == 0) {
+                        log_printf("EP0 Setup stage pattern\n");
+                        read_fifo(setup_packet, 8, epnum);
+                        /* After this, the Data stage begins.
+                         * A Setup stage done is received,
+                         * which triggers a Setup interrupt
+                         */
+                    } else {
+                        /* c) Setup stage done pattern
+                         *      These data indicate that the Setup stage for the specified endpoint has completed
+                         *      and the Data stage has started. After this entry is popped from the receive FIFO,
+                         *      the core asserts a Setup interrupt on the specified control OUT endpoint.
+                         */
+                        if (pktsts == SETUP_Done) {
+                            log_printf("EP0 Setup stage done pattern\n");
+                        } else {
+                            /* d) Data OUT packet pattern */
+                            if (pktsts == DataOUT) {
+                                if(buffer_ep0 != NULL) {
+                                    usb_hs_driver_rcv_out_pkt(buffer_ep0, &buffer_ep0_idx, buffer_ep0_size, bcnt, epnum);
+                                }
+                                /* In case of EP0, we have to manually check the completion and call the callback */
                                 if (buffer_ep0_idx == buffer_ep0_size) {
-       		                   buffer_ep0 = NULL; 
-                      	           if (usb_hs_callbacks.data_received_callback) {
-                               	   	usb_hs_callbacks.data_received_callback(buffer_ep0_idx);
-                              	   }
-                                   buffer_ep0_idx = buffer_ep0_size = 0;
-       	                        }
-			}
-			break;
-		}
-	        case USB_HS_DXEPCTL_EP1:
-		{
-		    /* Data OUT packet pattern on EP1 */
-                    if (pktsts == DataOUT && bcnt > 0 && buffer_ep1) {
-	                usb_hs_driver_rcv_out_pkt(buffer_ep1, &buffer_ep1_idx, buffer_ep1_size, bcnt, epnum);
-		    }
-		    break;
-		}
-	        default:
-		        log_printf("RXFLVL on bad EP %d!", epnum);
-	        }
-	    }
-
+                                    buffer_ep0 = NULL;
+                                    usb_hs_callbacks.data_received_callback(buffer_ep0_idx);
+                                    buffer_ep0_idx = buffer_ep0_size = 0;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            case USB_HS_DXEPCTL_EP1:
+                {
+                    /* Data OUT packet pattern on EP1 */
+                    //bcnt > 0 here because of the previous if
+                    if (bcnt>0 && pktsts == DataOUT && buffer_ep1) {
+                        usb_hs_driver_rcv_out_pkt(buffer_ep1, &buffer_ep1_idx, buffer_ep1_size, bcnt, epnum);
+                    }
+                    break;
+                }
+            default:
+                log_printf("RXFLVL on bad EP %d!", epnum);
+        }
+    }
     /* a) Global OUT NAK pattern (triggers an interrupt)
      *      These data indicate that the global OUT NAK bit has taken effect.
      */
@@ -1186,8 +1200,7 @@ static void rxflvl_handler(void)
     if (pktsts == DataOUT){
         log_printf("OUT Data transfer completed pattern on EP%d\n", epnum);
     }
-
-	set_reg(r_CORTEX_M_USB_HS_GINTMSK, 1, USB_HS_GINTMSK_RXFLVLM);
+    set_reg(r_CORTEX_M_USB_HS_GINTMSK, 1, USB_HS_GINTMSK_RXFLVLM);
 
 }
 
@@ -1339,10 +1352,10 @@ static void ep_init_reset(void)
 
 	/* FIXME Start data toggle */
 	set_reg(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP1), 1, USB_HS_DOEPCTL_SD0PID);
-	
+
 	/* Endpoint type */
 	set_reg(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP1), USB_HS_DOEPCTL_EPTYP_BULK, USB_HS_DOEPCTL_EPTYP);
-	
+
 	/*  USB active endpoint */
 	set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP1), USB_HS_DOEPCTL_USBAEP_Msk);
 
@@ -1438,17 +1451,15 @@ static void iepint_handler(void)
 		}
 
         /* Bit 0 XFRC: Transfer completed interrupt */
-		if (diepint0 & USB_HS_DIEPINT_XFRC_Msk) {
-			set_reg_bits(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP0), USB_HS_DIEPINT_XFRC_Msk);
-			ep0_packets_sent = 1;
-			/* Our callback */
-			if(ep0_last_packet_sent == 1){
-	        	       	if (usb_hs_callbacks.data_sent_callback){
-		        	       	usb_hs_callbacks.data_sent_callback();
-                		}
-			}
-		}
+        if (diepint0 & USB_HS_DIEPINT_XFRC_Msk) {
+            set_reg_bits(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP0), USB_HS_DIEPINT_XFRC_Msk);
+            ep0_packets_sent = 1;
+            /* Our callback */
+            if (ep0_last_packet_sent == 1){
+                usb_hs_callbacks.data_sent_callback();
+            }
         }
+    }
 
 	if (daint & USB_HS_DAINT_IEPINT(USB_HS_DXEPCTL_EP2)) {
 		uint32_t diepint2 = read_reg_value(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP2));
@@ -1479,14 +1490,12 @@ static void iepint_handler(void)
 		}
 
         /* Bit 2 XFRC: Transfer completed interrupt */
-		if (diepint2 & USB_HS_DIEPINT_XFRC_Msk) {
-			set_reg_bits(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP2), USB_HS_DIEPINT_XFRC_Msk);
-			if (usb_hs_callbacks.data_sent_callback){
-				usb_hs_callbacks.data_sent_callback();
-			}
-		}
+        if (diepint2 & USB_HS_DIEPINT_XFRC_Msk) {
+            set_reg_bits(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP2), USB_HS_DIEPINT_XFRC_Msk);
+            usb_hs_callbacks.data_sent_callback();
+        }
 
-	}
+    }
 
 	set_reg(r_CORTEX_M_USB_HS_GINTMSK, 1, USB_HS_GINTMSK_IEPINT);
 }
@@ -1504,37 +1513,35 @@ static void oepint_handler(void)
 {
 	uint32_t daint = read_reg_value(r_CORTEX_M_USB_HS_DAINT);
 
-	if (daint & USB_HS_DAINT_OEPINT(USB_HS_DXEPCTL_EP0)) {
-		uint32_t doepint0 = read_reg_value(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP0));
-		if (doepint0 & USB_HS_DOEPINT_STUP_Msk) {
-			/* We can process the received SETUP Packet (RM0090 p1357) */
-			set_reg_bits(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP0), USB_HS_DOEPINT_STUP_Msk);
-			struct usb_setup_packet stp_packet = {
-				setup_packet[0],
-				setup_packet[1],
-				setup_packet[3] << 8 | setup_packet[2],
-				setup_packet[5] << 8 | setup_packet[4],
-				setup_packet[7] << 8 | setup_packet[6]
-			};
-            		/* Inform the upper layer that a setup packet is available */
-			usb_ctrl_handler(&stp_packet);
-		}
-		if (doepint0 & USB_HS_DOEPINT_XFRC_Msk) {
-			set_reg_bits(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP0), USB_HS_DOEPINT_XFRC_Msk);	
-		}
-	}
-	if (daint & USB_HS_DAINT_OEPINT(USB_HS_DXEPCTL_EP1)) {
-		uint32_t doepint1 = read_reg_value(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP1));
-		if (doepint1 & USB_HS_DOEPINT_XFRC_Msk) {
-			set_reg_bits(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP1), USB_HS_DOEPINT_XFRC_Msk);
-			set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP1), USB_HS_DOEPCTL_SNAK_Msk); // WHERE in the datasheet ? In disabling an OUT ep (p1360)
-			buffer_ep1 = NULL;
-			if (usb_hs_callbacks.data_received_callback) {
-				usb_hs_callbacks.data_received_callback(buffer_ep1_idx);
-			}
-            		set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP0), USB_HS_DOEPCTL_CNAK_Msk);
-			buffer_ep1_idx = 0;
-		}
+    if (daint & USB_HS_DAINT_OEPINT(USB_HS_DXEPCTL_EP0)) {
+        uint32_t doepint0 = read_reg_value(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP0));
+        if (doepint0 & USB_HS_DOEPINT_STUP_Msk) {
+            /* We can process the received SETUP Packet (RM0090 p1357) */
+            set_reg_bits(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP0), USB_HS_DOEPINT_STUP_Msk);
+            struct usb_setup_packet stp_packet = {
+                setup_packet[0],
+                setup_packet[1],
+                setup_packet[3] << 8 | setup_packet[2],
+                setup_packet[5] << 8 | setup_packet[4],
+                setup_packet[7] << 8 | setup_packet[6]
+            };
+            /* Inform the upper layer that a setup packet is available */
+            usb_ctrl_handler(&stp_packet);
+        }
+        if (doepint0 & USB_HS_DOEPINT_XFRC_Msk) {
+            set_reg_bits(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP0), USB_HS_DOEPINT_XFRC_Msk);
+        }
+    }
+    if (daint & USB_HS_DAINT_OEPINT(USB_HS_DXEPCTL_EP1)) {
+        uint32_t doepint1 = read_reg_value(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP1));
+        if (doepint1 & USB_HS_DOEPINT_XFRC_Msk) {
+            set_reg_bits(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP1), USB_HS_DOEPINT_XFRC_Msk);
+            set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP1), USB_HS_DOEPCTL_SNAK_Msk); // WHERE in the datasheet ? In disabling an OUT ep (p1360)
+            buffer_ep1 = NULL;
+            usb_hs_callbacks.data_received_callback(buffer_ep1_idx);
+            set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP0), USB_HS_DOEPCTL_CNAK_Msk);
+            buffer_ep1_idx = 0;
+        }
 	}
 
 	set_reg(r_CORTEX_M_USB_HS_GINTMSK, 1, USB_HS_GINTMSK_OEPINT);
@@ -1543,18 +1550,11 @@ static void oepint_handler(void)
 /**
  * \brief Handles an unknown interrupt.
  */
-static void default_handler(uint8_t i)
-{
-	switch (i) {
-	case USB_HS_GINTSTS_USBSUSP_Pos:
-	case USB_HS_GINTSTS_ESUSP_Pos:
-	case USB_HS_GINTSTS_SOF_Pos:
-		break;
-	default:
-		log_printf("[USB FS] Unhandled int %d\n", i);
-	}
-}
 
+static void default_handler(void)
+{
+
+}
 
 #ifdef CONFIG_WOOKEY
 /**
@@ -1577,16 +1577,15 @@ void OTG_HS_IRQHandler(uint8_t irq __UNUSED, // IRQ number
     uint32_t val = intsts;
     val &= intmsk;
 
-	for (i = 0; i < 32; i++) {
-		if (!(intsts & ((uint32_t)1 << i)) || !(intmsk & ((uint32_t)1 << i)))
-			continue;
-		if (usb_hs_isr_handlers[i]){
-			usb_hs_isr_handlers[i]();
-		}
-		else{
-			default_handler(i);
-		}
-	}
+	for (i = 0; val; i++,val>>=1) {
+		/* Below code is equivalent to
+         * calculating (!(intsts & ((uint32_t)1 << i)) || !(intmsk & ((uint32_t)1 << i)))
+         */
+        if (val & 1)
+        {
+            usb_hs_isr_handlers[i]();
+        }
+    }
 }
 #endif
 
@@ -1604,38 +1603,38 @@ static void usb_power_on(void){
 static void usb_hs_init_isr_handlers(void)
 {
 #define X(interrupt, handler) (usb_hs_isr_handlers[interrupt] = handler)
-    X(USB_HS_GINTSTS_CMOD_Pos, NULL);                   /* 0  CMOD    : Current mode of operation */
-    X(USB_HS_GINTSTS_MMIS_Pos, NULL);                   /* 1  MMIS    : Mode mismatch interrupt */
-    X(USB_HS_GINTSTS_OTGINT_Pos, NULL);                 /* 2  OTGINT  : OTG interrupt */
-    X(USB_HS_GINTSTS_SOF_Pos, NULL);                    /* 3  SOF     : Start of frame */
+    X(USB_HS_GINTSTS_CMOD_Pos, default_handler);                   /* 0  CMOD    : Current mode of operation */
+    X(USB_HS_GINTSTS_MMIS_Pos, default_handler);                   /* 1  MMIS    : Mode mismatch interrupt */
+    X(USB_HS_GINTSTS_OTGINT_Pos, default_handler);                 /* 2  OTGINT  : OTG interrupt */
+    X(USB_HS_GINTSTS_SOF_Pos, default_handler);                    /* 3  SOF     : Start of frame */
     X(USB_HS_GINTSTS_RXFLVL_Pos, rxflvl_handler);       /* 4  RXFLVL  : RxFIFO non-empty */
-    X(USB_HS_GINTSTS_NPTXFE_Pos, NULL);                 /* 5  NPTXFE  : Non-periodic TxFIFO empty (HOST MODE ONLY) */
-    X(USB_HS_GINTSTS_GINAKEFF_Pos, NULL);               /* 6  GINAKEFF: Global IN non-periodic NAK effective */
-    X(USB_HS_GINTSTS_GOUTNAKEFF_Pos, NULL);             /* 7  GONAKEFF: Global OUT NAK effective */
-    X(8, NULL);                                         /* 8  Reserved */
-    X(9, NULL);                                         /* 7  Reserved */
-    X(USB_HS_GINTSTS_ESUSP_Pos, NULL);                  /* 10 ESUSP   : Early suspend */
-    X(USB_HS_GINTSTS_USBSUSP_Pos, NULL);                /* 11 USBSUSP : USB suspend */
+    X(USB_HS_GINTSTS_NPTXFE_Pos, default_handler);                 /* 5  NPTXFE  : Non-periodic TxFIFO empty (HOST MODE ONLY) */
+    X(USB_HS_GINTSTS_GINAKEFF_Pos, default_handler);               /* 6  GINAKEFF: Global IN non-periodic NAK effective */
+    X(USB_HS_GINTSTS_GOUTNAKEFF_Pos, default_handler);             /* 7  GONAKEFF: Global OUT NAK effective */
+    X(8, default_handler);                                         /* 8  Reserved */
+    X(9, default_handler);                                         /* 7  Reserved */
+    X(USB_HS_GINTSTS_ESUSP_Pos, default_handler);                  /* 10 ESUSP   : Early suspend */
+    X(USB_HS_GINTSTS_USBSUSP_Pos, default_handler);                /* 11 USBSUSP : USB suspend */
     X(USB_HS_GINTSTS_USBRST_Pos, ep_init_reset);        /* 12 USBRST  : USB reset */
     X(USB_HS_GINTSTS_ENUMDNE_Pos, ep_init_enum);        /* 13 ENUMDNE : Speed Enumeration done */
-    X(USB_HS_GINTSTS_ISOODRP_Pos, NULL);                /* 14 ISOODRP : Isochronous OUT packet dropped interrupt */
-    X(USB_HS_GINTSTS_EOPF_Pos, NULL);                   /* 15 EOPF    : End of periodic frame interrupt */
-    X(16, NULL);                                        /* 16 Reserved */
-    X(USB_HS_GINTSTS_EPMISM_Pos, NULL);                 /* 17 EPMISM  : Endpoint mismatch interrupt */
+    X(USB_HS_GINTSTS_ISOODRP_Pos, default_handler);                /* 14 ISOODRP : Isochronous OUT packet dropped interrupt */
+    X(USB_HS_GINTSTS_EOPF_Pos, default_handler);                   /* 15 EOPF    : End of periodic frame interrupt */
+    X(16, default_handler);                                        /* 16 Reserved */
+    X(USB_HS_GINTSTS_EPMISM_Pos, default_handler);                 /* 17 EPMISM  : Endpoint mismatch interrupt */
     X(USB_HS_GINTSTS_IEPINT_Pos, iepint_handler);       /* 18 IEPINT  : IN endpoint interrupt */
     X(USB_HS_GINTSTS_OEPINT_Pos, oepint_handler);       /* 19 OEPINT  : OUT endpoint interrupt */
-    X(USB_HS_GINTSTS_IISOIXFR_Pos, NULL);               /* 20 IISOIXFR: Incomplete isochronous IN transfer */
-    X(USB_HS_GINTSTS_IPXFR_Pos, NULL);                  /* 21 IPXFR   : Incomplete periodic transfer */
-    X(22, NULL);                                        /* 22 Reserved */
-    X(23, NULL);                                        /* 23 Reserved */
-    X(USB_HS_GINTSTS_HPRTINT_Pos, NULL);                /* 24 HPRTINT : Host port interrupt (HOST MODE ONLY) */
-    X(USB_HS_GINTSTS_HCINT_Pos, NULL);                  /* 25 HCINT   : Host channels interrupt (HOST MODE ONLY) */
-    X(USB_HS_GINTSTS_PTXFE_Pos, NULL);                  /* 26 PTXFE   : Periodic TxFIFO empty (HOST MODE ONLY) */
-    X(27, NULL);                                        /* 27 Reserved */
-    X(USB_HS_GINTSTS_CIDSCHG_Pos, NULL);                /* 28 CIDSCHG : Connector ID status change */
-    X(USB_HS_GINTSTS_DISCINT_Pos, NULL);                /* 29 DISCINT : Disconnect detected interrupt (HOST MODE ONLY)*/
+    X(USB_HS_GINTSTS_IISOIXFR_Pos, default_handler);               /* 20 IISOIXFR: Incomplete isochronous IN transfer */
+    X(USB_HS_GINTSTS_IPXFR_Pos, default_handler);                  /* 21 IPXFR   : Incomplete periodic transfer */
+    X(22, default_handler);                                        /* 22 Reserved */
+    X(23, default_handler);                                        /* 23 Reserved */
+    X(USB_HS_GINTSTS_HPRTINT_Pos, default_handler);                /* 24 HPRTINT : Host port interrupt (HOST MODE ONLY) */
+    X(USB_HS_GINTSTS_HCINT_Pos, default_handler);                  /* 25 HCINT   : Host channels interrupt (HOST MODE ONLY) */
+    X(USB_HS_GINTSTS_PTXFE_Pos, default_handler);                  /* 26 PTXFE   : Periodic TxFIFO empty (HOST MODE ONLY) */
+    X(27, default_handler);                                        /* 27 Reserved */
+    X(USB_HS_GINTSTS_CIDSCHG_Pos, default_handler);                /* 28 CIDSCHG : Connector ID status change */
+    X(USB_HS_GINTSTS_DISCINT_Pos, default_handler);                /* 29 DISCINT : Disconnect detected interrupt (HOST MODE ONLY)*/
     X(USB_HS_GINTSTS_SRQINT_Pos, usb_power_on);                 /* 30 SRQINT  : Session request/new session detected interrupt */
-    X(USB_HS_GINTSTS_WKUPINT_Pos, NULL);                /* 31 WKUPINT : Resume/remote wakeup detected interrupt */
+    X(USB_HS_GINTSTS_WKUPINT_Pos, default_handler);                /* 31 WKUPINT : Resume/remote wakeup detected interrupt */
 #undef X
 }
 
@@ -1659,45 +1658,45 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
     uint32_t tmp;
 	uint32_t i;
 
-	if (needed_words > USB_HS_TX_FIFO_SZ){
-		log_printf("needed_words > %d", USB_HS_TX_FIFO_SZ);
-	}
+    if (needed_words > USB_HS_TX_FIFO_SZ){
+        log_printf("needed_words > %d", USB_HS_TX_FIFO_SZ);
+    }
 
-	while (get_reg(r_CORTEX_M_USB_HS_DTXFSTS(ep), USB_HS_DTXFSTS_INEPTFSAV) < needed_words){
-		/* Are we suspended? */
-		if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
-			return;
-		}
-	}
+    while (get_reg(r_CORTEX_M_USB_HS_DTXFSTS(ep), USB_HS_DTXFSTS_INEPTFSAV) < needed_words){
+        /* Are we suspended? */
+        if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
+            return;
+        }
+    }
 
-        // FIXME: IP should has its own interrupts disable during ISR execution
-        uint32_t oldmask = read_reg_value(r_CORTEX_M_USB_HS_GINTMSK);
-        set_reg_value(r_CORTEX_M_USB_HS_GINTMSK, 0, 0xffffffff, 0);
-	//disable_irq();
-	
-	for (i = 0; i < size_4bytes; i++, src += 4){
-		write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint32_t *)src);
-	}
-	switch (size & 3) {
-	case 1:
-		write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint8_t *)src);
-		break;
-	case 2:
-		write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint16_t *)src);
-		break;
-	case 3:
-        tmp  = ((uint8_t*) src)[0];
-        tmp |= ((uint8_t*) src)[1] << 8;
-        tmp |= ((uint8_t*) src)[2] << 16;
-		write_reg_value(USB_HS_DEVICE_FIFO(ep), tmp);
-		break;
-	default:
-		break;
-	}
+    // FIXME: IP should has its own interrupts disable during ISR execution
+    uint32_t oldmask = read_reg_value(r_CORTEX_M_USB_HS_GINTMSK);
+    set_reg_value(r_CORTEX_M_USB_HS_GINTMSK, 0, 0xffffffff, 0);
+    //disable_irq();
 
-        // FIXME: IP should has its own interrupts disable during ISR execution
-	//enable_irq();
- 	set_reg_value(r_CORTEX_M_USB_HS_GINTMSK, oldmask, 0xffffffff, 0);
+    for (i = 0; i < size_4bytes; i++, src += 4){
+        write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint32_t *)src);
+    }
+    switch (size & 3) {
+        case 1:
+            write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint8_t *)src);
+            break;
+        case 2:
+            write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint16_t *)src);
+            break;
+        case 3:
+            tmp  = ((uint8_t*) src)[0];
+            tmp |= ((uint8_t*) src)[1] << 8;
+            tmp |= ((uint8_t*) src)[2] << 16;
+            write_reg_value(USB_HS_DEVICE_FIFO(ep), tmp);
+            break;
+        default:
+            break;
+    }
+
+    // FIXME: IP should has its own interrupts disable during ISR execution
+    //enable_irq();
+    set_reg_value(r_CORTEX_M_USB_HS_GINTMSK, oldmask, 0xffffffff, 0);
 }
 
 
@@ -1707,11 +1706,11 @@ static void write_fifo(const void *src, uint32_t size, uint8_t ep)
 	unsigned int i;
 	unsigned int num = size / USB_HS_TX_FIFO_SZ;
 
-	for(i = 0; i < num; i++){
+	for(i = 0; i < num; i++) {
 		_write_fifo(src + (i * USB_HS_TX_FIFO_SZ), USB_HS_TX_FIFO_SZ, ep);
 	}
 	/* Handle the possible last packet */
-	if(size > (num * USB_HS_TX_FIFO_SZ)){
+	if(size > (num * USB_HS_TX_FIFO_SZ)) {
 		_write_fifo(src + (num * USB_HS_TX_FIFO_SZ), size - (num * USB_HS_TX_FIFO_SZ), ep);
 	}
 
@@ -1768,7 +1767,7 @@ static void _usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
     */
     write_fifo(src, size, ep);
     /* Are we suspended */
-    if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
+    if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)) {
         return;
     }
     //FIXME activate TXEMPTY intrrupt in DIEPEMPMSK register
@@ -1777,56 +1776,54 @@ static void _usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
 void usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
 {
 	/* FIXME/TODO: it would be cleaner to monitor TXEMPTY here */
-	if((ep == USB_HS_DXEPCTL_EP0) && (src != NULL)){
+	if((ep == USB_HS_DXEPCTL_EP0) && (src != NULL)) {
 		/* Special handling for EP0 to split sending across multiple packets */
-		unsigned int i;
-	    	uint32_t packet_count = 0;
-    		packet_count = size / MAX_DATA_PACKET_SIZE(ep);
-		ep0_last_packet_sent = 0;
-		for(i = 0; i < packet_count; i++){
-			if((size == (packet_count * MAX_DATA_PACKET_SIZE(ep))) && (i == packet_count-1)){
-				ep0_last_packet_sent = 1;
-			}
-			ep0_packets_sent = 0;
-			_usb_hs_driver_send(src+(i*MAX_DATA_PACKET_SIZE(ep)), MAX_DATA_PACKET_SIZE(ep), ep);
-			if(((size == (packet_count * MAX_DATA_PACKET_SIZE(ep))) && (i != packet_count-1)) ||
-			    (size != (packet_count * MAX_DATA_PACKET_SIZE(ep)))){
-				/* For all the intermediate packets except the last one:
-				 * wait with host hang up detection
-				 */
-				while(ep0_packets_sent == 0){
-					/* Are we suspended? */
-    					if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
-						break;
-					}
-				}
-			}
-		}
-		if(size != (packet_count * MAX_DATA_PACKET_SIZE(ep))){
-			/* Residual data to send */
-			ep0_last_packet_sent = 1;
-			_usb_hs_driver_send(src+(packet_count*MAX_DATA_PACKET_SIZE(ep)), size - (packet_count*MAX_DATA_PACKET_SIZE(ep)), ep);
-		}
-		if(packet_count > 0){
-            		set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP0), USB_HS_DOEPCTL_CNAK_Msk);
-		}
-	}
-	else if((ep == USB_HS_DXEPCTL_EP0) && (src == NULL)){
-		ep0_last_packet_sent = 1;
-		_usb_hs_driver_send(src, size, ep);
-	}
-	else{
-		_usb_hs_driver_send(src, size, ep);
-	}
-	/* If we are suspended, call ourself the callback and flush stuff */
-    	if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
-		usb_hs_driver_TXFIFO_flush_all();
-	      	if (usb_hs_callbacks.data_sent_callback){
-	     	       	usb_hs_callbacks.data_sent_callback();
-        	}
-	}
-	
+        unsigned int i;
+        uint32_t packet_count = 0;
+        packet_count = size / MAX_DATA_PACKET_SIZE(ep);
+        ep0_last_packet_sent = 0;
+        for(i = 0; i < packet_count; i++) {
+            if((size == (packet_count * MAX_DATA_PACKET_SIZE(ep))) && (i == packet_count-1)) {
+                ep0_last_packet_sent = 1;
+            }
+            ep0_packets_sent = 0;
+            _usb_hs_driver_send(src+(i*MAX_DATA_PACKET_SIZE(ep)), MAX_DATA_PACKET_SIZE(ep), ep);
+            if(((size == (packet_count * MAX_DATA_PACKET_SIZE(ep))) && (i != packet_count-1)) ||
+                (size != (packet_count * MAX_DATA_PACKET_SIZE(ep))))
+            {
+                /* For all the intermediate packets except the last one:
+                 * wait with host hang up detection
+                 */
+                while (ep0_packets_sent == 0) {
+                    /* Are we suspended? */
+                    if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)){
+                        break;
+                    }
+                }
+            }
+        }
+        if(size != (packet_count * MAX_DATA_PACKET_SIZE(ep))) {
+            /* Residual data to send */
+            ep0_last_packet_sent = 1;
+            _usb_hs_driver_send(src+(packet_count*MAX_DATA_PACKET_SIZE(ep)), size - (packet_count*MAX_DATA_PACKET_SIZE(ep)), ep);
+        }
+        if(packet_count > 0) {
+            set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP0), USB_HS_DOEPCTL_CNAK_Msk);
+        }
+    }
+    else if ((ep == USB_HS_DXEPCTL_EP0) && (src == NULL)) {
+        ep0_last_packet_sent = 1;
+        _usb_hs_driver_send(src, size, ep);
+    } else {
+        _usb_hs_driver_send(src, size, ep);
+    }
+    /* If we are suspended, call ourself the callback and flush stuff */
+    if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)) {
+        usb_hs_driver_TXFIFO_flush_all();
+        usb_hs_callbacks.data_sent_callback();
+    }
 }
+
 /**
  * \brief Function to handle read call.
  *
@@ -1846,26 +1843,25 @@ void usb_hs_driver_read(void *dst, uint32_t size, uint8_t ep)
 		buffer_ep0 = dst;
 		buffer_ep0_idx = 0;
 		buffer_ep0_size = size;
-		/* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ... 
+		/* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ...
 		 * Handling the completion in rxflvl is a better choice.
 		 */
 	}
 	if (ep == USB_HS_DXEPCTL_EP0 && dst == NULL) {
 		buffer_ep0 = NULL;
 		buffer_ep0_idx = buffer_ep0_size = 0;
-		/* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ... 
+		/* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ...
 		 * Handling the completion in rxflvl is a better choice.
 		 */
 	}
 	if (ep == USB_HS_DXEPCTL_EP1) {
-		if(dst != NULL){
+		if (dst != NULL) {
 			assert(dst);
 			assert(!buffer_ep1);
 			buffer_ep1 = dst;
 			buffer_ep1_idx = 0;
 			buffer_ep1_size = size;
-		}
-		else{
+		} else {
 			buffer_ep1 = NULL;
 			buffer_ep1_idx = buffer_ep1_size = 0;
 		}
@@ -1887,4 +1883,4 @@ void usb_hs_driver_set_address(uint16_t addr)
 	set_reg(r_CORTEX_M_USB_HS_DCFG, addr, USB_HS_DCFG_DAD);
 }
 
-#endif 
+#endif
