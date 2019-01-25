@@ -3,9 +3,6 @@ config USR_DRV_USB
   default y
   ---help---
   Support for STM32 USB.
-config USR_DRV_USB_CFLAGS
-  string
-  default " -I../../drivers/socs/stm32f439/usb/api " if USR_DRV_USB
 
 if USR_DRV_USB
 
