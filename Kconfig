@@ -48,6 +48,10 @@ config USB_DEV_SERIAL_INDEX
   int "USB device serial index"
   default 3
 
+config USB_DEV_REVISION
+  string "USB Device Revision"
+  default "0001"
+
 config USB_DEV_VENDORID
   hex "USB Vendor Identifier"
   default 0xDEAD
