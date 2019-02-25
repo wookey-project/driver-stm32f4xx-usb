@@ -359,6 +359,9 @@ static uint8_t usb_device_early_init(void) {
 }
 
 static uint16_t size_from_mpsize(usb_ep_t *ep){
+    if(ep == NULL){
+        return 0;
+    }
     if (ep->max_packet_size == USB_HS_D0EPCTL_MPSIZ_64BYTES){
         return 64;
     }
@@ -982,6 +985,10 @@ static void _read_fifo(volatile uint8_t *dest, volatile uint32_t size, uint8_t e
 	assert(ep <= 1);
 	assert(size <= USB_HS_RX_FIFO_SZ);
 
+	if((size != 0) && (dest == NULL)){
+		return;
+        }
+
 	uint32_t i = 0;
 	uint32_t size_4bytes = size / 4;
     uint32_t tmp;
@@ -1040,6 +1047,7 @@ static void usb_hs_driver_rcv_out_pkt(volatile uint8_t *buffer,
 {
 	uint32_t size;
 	assert(buffer);
+	assert(buffer_idx);
 	size = (bcnt + *buffer_idx) >= buffer_size ? (buffer_size - *buffer_idx) : bcnt;
 	read_fifo(buffer + *buffer_idx, size, epnum);
 	*buffer_idx += size;
@@ -1657,6 +1665,10 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
 	uint32_t needed_words = size / 4 + (size & 3 ? 1 : 0);
     uint32_t tmp;
 	uint32_t i;
+
+     if((size != 0) && (src == NULL)){
+           return;
+     }
 
     if (needed_words > USB_HS_TX_FIFO_SZ){
         log_printf("needed_words > %d", USB_HS_TX_FIFO_SZ);
