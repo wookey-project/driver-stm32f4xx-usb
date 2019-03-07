@@ -1564,7 +1564,7 @@ static void default_handler(void)
 
 }
 
-#ifdef CONFIG_WOOKEY
+#if CONFIG_WOOKEY || CONFIG_WOOKEY2
 /**
  * \brief Manage IRQ handler calls.
  *

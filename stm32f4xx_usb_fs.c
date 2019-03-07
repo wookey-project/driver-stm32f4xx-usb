@@ -874,7 +874,7 @@ static void _read_fifo(volatile uint8_t *dest, volatile uint32_t size, uint8_t e
 {
 	assert(ep <= 1);
 	assert(size <= USB_FS_RX_FIFO_SZ);
-	
+
         if((size != 0) && (dest == NULL)){
                 return;
         }
@@ -1481,7 +1481,7 @@ static void default_handler(uint8_t i)
 
 static uint32_t usb_fs_isr_handlers_count[USB_MAX_ISR] = { 0 };
 
-#ifdef CONFIG_WOOKEY
+#ifdef CONFIG_WOOKEY || CONFIG_WOOKEY2
 /**
  * \brief Manage IRQ handler calls.
  *
@@ -1787,14 +1787,14 @@ void usb_fs_driver_read(void *dst, uint32_t size, uint8_t ep)
                 buffer_ep0 = dst;
                 buffer_ep0_idx = 0;
                 buffer_ep0_size = size;
-                /* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ... 
+                /* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ...
                  * Handling the completion in rxflvl is a better choice.
                  */
         }
         if (ep == USB_FS_DXEPCTL_EP0 && dst == NULL) {
                 buffer_ep0 = NULL;
                 buffer_ep0_idx = buffer_ep0_size = 0;
-                /* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ... 
+                /* No need to trigger a oepint interrupt here, since we are limited to 64 bytes packets anyways ...
                  * Handling the completion in rxflvl is a better choice.
                  */
         }
