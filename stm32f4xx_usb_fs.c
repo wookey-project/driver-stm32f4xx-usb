@@ -1481,7 +1481,7 @@ static void default_handler(uint8_t i)
 
 static uint32_t usb_fs_isr_handlers_count[USB_MAX_ISR] = { 0 };
 
-#ifdef CONFIG_WOOKEY || CONFIG_WOOKEY2
+#ifdef CONFIG_WOOKEY
 /**
  * \brief Manage IRQ handler calls.
  *
