@@ -181,7 +181,7 @@ static uint8_t usb_device_early_init(void) {
 
     /* IRQ configuration */
     dev.irqs[0].handler = OTG_FS_IRQHandler;
-    dev.irqs[0].irq = 0x53; /* starting with STACK */
+    dev.irqs[0].irq = OTG_FS_IRQ; /* starting with STACK */
     dev.irqs[0].mode = IRQ_ISR_FORCE_MAINTHREAD; /* if ISR force MT immediat execution, use FORCE_MAINTHREAD instead of STANDARD, and activate FISR permission */
 
     /*
