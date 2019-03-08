@@ -12,6 +12,7 @@
 #ifdef CONFIG_USR_DRV_USB_FS
 #include "api/syscall.h"
 #include "api/print.h"
+#include "generated/usb_otg_fs.h";
 
 /*
  * This should be replaced in Kconfig and source:
@@ -236,8 +237,8 @@ static uint8_t usb_device_early_init(void) {
 
 	/* SOF -> PA 8 */
     dev.gpios[0].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[0].kref.port    = GPIO_PA;
-    dev.gpios[0].kref.pin     = 8;
+    dev.gpios[0].kref.port    = usb_otg_fs_dev_infos.gpios[USB_FS_SOF].port;
+    dev.gpios[0].kref.pin     = usb_otg_fs_dev_infos.gpios[USB_FS_SOF].pin;
     dev.gpios[0].mode         = GPIO_PIN_ALTERNATE_MODE;
     dev.gpios[0].pupd         = GPIO_NOPULL;
     dev.gpios[0].type         = GPIO_PIN_OTYPER_PP;
@@ -245,8 +246,8 @@ static uint8_t usb_device_early_init(void) {
     dev.gpios[0].afr          = GPIO_AF_OTG_FS;
 	/* VBUS -> PA 9 */
     dev.gpios[1].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[1].kref.port    = GPIO_PA;
-    dev.gpios[1].kref.pin     = 9;
+    dev.gpios[1].kref.port    = usb_otg_fs_dev_infos.gpios[USB_FS_VBUS].port;
+    dev.gpios[1].kref.pin     = usb_otg_fs_dev_infos.gpios[USB_FS_VBUS].pin;
     dev.gpios[1].mode         = GPIO_PIN_INPUT_MODE;
     dev.gpios[1].pupd         = GPIO_NOPULL;
     dev.gpios[1].type         = GPIO_PIN_OTYPER_PP;
@@ -255,8 +256,8 @@ static uint8_t usb_device_early_init(void) {
 
 	/* DM pin -> PA11 */
     dev.gpios[2].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[2].kref.port    = GPIO_PA;
-    dev.gpios[2].kref.pin     = 11;
+    dev.gpios[2].kref.port    = usb_otg_fs_dev_infos.gpios[USB_FS_DM].port;
+    dev.gpios[2].kref.pin     = usb_otg_fs_dev_infos.gpios[USB_FS_DM].pin;
     dev.gpios[2].mode         = GPIO_PIN_ALTERNATE_MODE;
     dev.gpios[2].pupd         = GPIO_NOPULL;
     dev.gpios[2].type         = GPIO_PIN_OTYPER_PP;
@@ -265,8 +266,8 @@ static uint8_t usb_device_early_init(void) {
 
 	/* DP pin -> PA12 */
     dev.gpios[3].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[3].kref.port    = GPIO_PA;
-    dev.gpios[3].kref.pin     = 12;
+    dev.gpios[3].kref.port    = usb_otg_fs_dev_infos.gpios[USB_FS_DP].port;
+    dev.gpios[3].kref.pin     = usb_otg_fs_dev_infos.gpios[USB_FS_DP].pin;
     dev.gpios[3].mode         = GPIO_PIN_ALTERNATE_MODE;
     dev.gpios[3].pupd         = GPIO_NOPULL;
     dev.gpios[3].type         = GPIO_PIN_OTYPER_PP;

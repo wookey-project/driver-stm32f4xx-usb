@@ -13,6 +13,7 @@
 #include "api/usb_control.h"
 #include "api/syscall.h"
 #include "api/print.h"
+#include "generated/usb_otg_hs.h"
 
 #define ZERO_LENGTH_PACKET 0
 #define OUT_NAK		0x01
@@ -200,16 +201,6 @@ void usb_hs_driver_map(void)
 
 static uint8_t usb_device_early_init(void) {
 
-    const uint8_t d_pin[7] = {
-      ULPI_D1_PIN,
-      ULPI_D2_PIN,
-      ULPI_D7_PIN,
-      ULPI_D3_PIN,
-      ULPI_D4_PIN,
-      ULPI_D5_PIN,
-      ULPI_D6_PIN
-    };
-
     e_syscall_ret ret = 0;
     device_t dev;
     memset((void*)&dev, 0, sizeof(device_t));
@@ -282,8 +273,8 @@ static uint8_t usb_device_early_init(void) {
 
 	/* ULPI_D0 */
     dev.gpios[0].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[0].kref.port    = GPIO_PA;
-    dev.gpios[0].kref.pin     = ULPI_D0_PIN; /* 3 */
+    dev.gpios[0].kref.port    = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_D0].port;
+    dev.gpios[0].kref.pin     = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_D0].pin; /* 3 */
     dev.gpios[0].mode         = GPIO_PIN_ALTERNATE_MODE;
     dev.gpios[0].pupd         = GPIO_NOPULL;
     dev.gpios[0].type         = GPIO_PIN_OTYPER_PP;
@@ -292,30 +283,32 @@ static uint8_t usb_device_early_init(void) {
 
 	/* ULPI_CLK */
     dev.gpios[1].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[1].kref.port    = GPIO_PA;
-    dev.gpios[1].kref.pin     = ULPI_CLK_PIN; /*5*/
+    dev.gpios[1].kref.port    = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_CLK].port;
+    dev.gpios[1].kref.pin     = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_CLK].pin; /* 3 */
     dev.gpios[1].mode         = GPIO_PIN_ALTERNATE_MODE;
     dev.gpios[1].pupd         = GPIO_NOPULL;
     dev.gpios[1].type         = GPIO_PIN_OTYPER_PP;
     dev.gpios[1].speed        = GPIO_PIN_VERY_HIGH_SPEED;
     dev.gpios[1].afr          = GPIO_AF_OTG_HS;
 
-    for (uint8_t i = 0; i < 7; ++i) {
+    for (uint8_t i = USB_HS_ULPI_D1; i <= USB_HS_ULPI_D7; ++i) {
+        /* INFO: for this loop to work, USB_HS_ULPI_D1 must start at index 2
+         * in the JSON file */
         /* ULPI_Di */
-        dev.gpios[i + 2].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-        dev.gpios[i + 2].kref.port    = GPIO_PB;
-        dev.gpios[i + 2].kref.pin     = d_pin[i];
-        dev.gpios[i + 2].mode         = GPIO_PIN_ALTERNATE_MODE;
-        dev.gpios[i + 2].pupd         = GPIO_NOPULL;
-        dev.gpios[i + 2].type         = GPIO_PIN_OTYPER_PP;
-        dev.gpios[i + 2].speed        = GPIO_PIN_VERY_HIGH_SPEED;
-        dev.gpios[i + 2].afr          = GPIO_AF_OTG_HS;
+        dev.gpios[i].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
+        dev.gpios[i].kref.port    = usb_otg_hs_dev_infos.gpios[i].port;
+        dev.gpios[i].kref.pin     = usb_otg_hs_dev_infos.gpios[i].pin;
+        dev.gpios[i].mode         = GPIO_PIN_ALTERNATE_MODE;
+        dev.gpios[i].pupd         = GPIO_NOPULL;
+        dev.gpios[i].type         = GPIO_PIN_OTYPER_PP;
+        dev.gpios[i].speed        = GPIO_PIN_VERY_HIGH_SPEED;
+        dev.gpios[i].afr          = GPIO_AF_OTG_HS;
     }
 
     /* ULPI_STP */
     dev.gpios[9].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[9].kref.port    = GPIO_PC;
-    dev.gpios[9].kref.pin     = ULPI_STP_PIN;
+    dev.gpios[9].kref.port    = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_STP].port;
+    dev.gpios[9].kref.pin     = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_STP].pin; /* 3 */
     dev.gpios[9].mode         = GPIO_PIN_ALTERNATE_MODE;
     dev.gpios[9].pupd         = GPIO_NOPULL;
     dev.gpios[9].type         = GPIO_PIN_OTYPER_PP;
@@ -324,8 +317,8 @@ static uint8_t usb_device_early_init(void) {
 
     /* ULPI_DIR */
     dev.gpios[10].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[10].kref.port    = GPIO_PC;
-    dev.gpios[10].kref.pin     = ULPI_DIR_PIN;
+    dev.gpios[10].kref.port    = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_DIR].port;
+    dev.gpios[10].kref.pin     = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_DIR].pin; /* 3 */
     dev.gpios[10].mode         = GPIO_PIN_ALTERNATE_MODE;
     dev.gpios[10].pupd         = GPIO_NOPULL;
     dev.gpios[10].type         = GPIO_PIN_OTYPER_PP;
@@ -334,8 +327,9 @@ static uint8_t usb_device_early_init(void) {
 
     /* ULPI_NXT */
     dev.gpios[11].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[11].kref.port    = GPIO_PC;
-    dev.gpios[11].kref.pin     = ULPI_NXT_PIN;
+
+    dev.gpios[11].kref.port    = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_NXT].port;
+    dev.gpios[11].kref.pin     = usb_otg_hs_dev_infos.gpios[USB_HS_ULPI_NXT].pin; /* 3 */
     dev.gpios[11].mode         = GPIO_PIN_ALTERNATE_MODE;
     dev.gpios[11].pupd         = GPIO_NOPULL;
     dev.gpios[11].type         = GPIO_PIN_OTYPER_PP;
@@ -344,8 +338,9 @@ static uint8_t usb_device_early_init(void) {
 
     /* Reset */
     dev.gpios[12].mask         = GPIO_MASK_SET_MODE | GPIO_MASK_SET_PUPD | GPIO_MASK_SET_TYPE | GPIO_MASK_SET_SPEED | GPIO_MASK_SET_AFR;
-    dev.gpios[12].kref.port    = GPIO_PE;
-    dev.gpios[12].kref.pin     = 13;
+
+    dev.gpios[12].kref.port    = usb_otg_hs_dev_infos.gpios[USB_HS_RESET].port;
+    dev.gpios[12].kref.pin     = usb_otg_hs_dev_infos.gpios[USB_HS_RESET].pin; /* 3 */
     dev.gpios[12].mode         = GPIO_PIN_OUTPUT_MODE;
     dev.gpios[12].pupd         = GPIO_PULLUP;//GPIO_PULLDOWN;
     dev.gpios[12].type         = GPIO_PIN_OTYPER_PP;
