@@ -13,6 +13,7 @@
 #include "api/usb_control.h"
 #include "api/syscall.h"
 #include "api/print.h"
+#include "api/string.h"
 #include "generated/usb_otg_hs.h"
 
 #define ZERO_LENGTH_PACKET 0

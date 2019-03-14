@@ -8,6 +8,7 @@
 
 #include "api/usb_control.h"
 #include "api/print.h"
+#include "api/string.h"
 
 //#include "usb_device.h"
 
