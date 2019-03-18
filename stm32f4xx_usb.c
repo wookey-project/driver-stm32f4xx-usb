@@ -1,6 +1,7 @@
 #include "autoconf.h"
 #include "api/usb.h"
-#include "api/print.h"
+#include "api/stdio.h"
+#include "api/nostd.h"
 
 /*
  * This should be replaced in Kconfig and source:

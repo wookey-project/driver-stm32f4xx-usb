@@ -12,7 +12,8 @@
 #include "stm32f4xx_usb_hs_regs.h"
 #include "api/usb_control.h"
 #include "api/syscall.h"
-#include "api/print.h"
+#include "api/stdio.h"
+#include "api/nostd.h"
 #include "api/string.h"
 #include "generated/usb_otg_hs.h"
 
