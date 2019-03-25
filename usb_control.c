@@ -11,6 +11,16 @@
 #include "api/nostd.h"
 #include "api/string.h"
 
+#define USB_CTRL_DEBUG 0
+
+#if USB_CTRL_DEBUG
+#define log_printf(...) aprintf(__VA_ARGS__)
+#else
+#define log_printf(...) {};
+#endif
+
+
+
 //#include "usb_device.h"
 
 usb_ctrl_device_descriptor_t usb_ctrl_device_desc;
@@ -27,7 +37,7 @@ static void usb_ctrl_init_structures(void)
  * \brief Send device descriptor.
  */
 static void usb_ctrl_device_desc_rqst_handler(uint16_t wLength){
-	aprintf("wLength:%d - sizeof(usb_ctrl_device_desc):%d\n", wLength, sizeof(usb_ctrl_device_desc));
+	log_printf("wLength:%d - sizeof(usb_ctrl_device_desc):%d\n", wLength, sizeof(usb_ctrl_device_desc));
     if ( wLength == 0 ){
         usb_driver_setup_send_status(0);
         usb_driver_setup_read_status();
@@ -49,7 +59,7 @@ static void usb_ctrl_device_desc_rqst_handler(uint16_t wLength){
  * @param wLength Descriptor length.
  */
 static void usb_ctrl_configuration_desc_rqst_handler(uint16_t wLength){
-	aprintf("wLength:%d - sizeof(usb_ctrl_device_desc):%d\n", wLength, usb_ctrl_conf_desc.config_desc.wTotalLength);
+	log_printf("wLength:%d - sizeof(usb_ctrl_device_desc):%d\n", wLength, usb_ctrl_conf_desc.config_desc.wTotalLength);
     if ( wLength == 0 ){
         usb_driver_setup_send_status(0);
         usb_driver_setup_read_status();
@@ -74,8 +84,8 @@ static void usb_ctrl_configuration_desc_rqst_handler(uint16_t wLength){
  *
  * @param packet Setup packet
  */
-static void usb_ctrl_default_class_rqst_handler(struct usb_setup_packet *packet){
-    aprintf("No class rqst handler is defined for class \n", packet->bRequest);
+static void usb_ctrl_default_class_rqst_handler(struct usb_setup_packet *packet __attribute__((unused))){
+    log_printf("No class rqst handler is defined for class \n", packet->bRequest);
 }
 
 
@@ -103,7 +113,7 @@ static void usb_ctrl_default_set_interface_rqst_handler(int iface){
             usb_driver_setup_send_status(0);
 	    } else {
             /* FIXME We should handle multiple interface */
-		    aprintf("%d 1\n", iface);
+		    log_printf("%d 1\n", iface);
             usb_driver_stall_in(EP0);
 	    }
 }
@@ -114,7 +124,7 @@ static void usb_ctrl_default_set_configuration_rqst_handler(int conf){
         usb_driver_setup_send_status(0);
 	} else {
         /* FIXME We should handle multiple configuration */
-		aprintf("SET_CONFIGURATION %d 1\n", conf);
+		log_printf("SET_CONFIGURATION %d 1\n", conf);
         usb_driver_stall_in(EP0);
 	}
 }
@@ -226,7 +236,7 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index, uint16_t wLength){
 			string_desc.wString[i] = CONFIG_USB_DEV_SERIAL[i];
 		break;
 	case STRING_MICROSOFT_INDEX:
-        aprintf("STRING_MICROSOFT_INDEX");
+        log_printf("STRING_MICROSOFT_INDEX");
         usb_ctrl_callbacks.mft_string_rqst_handler(wLength);
 		break;
 	default:
@@ -245,8 +255,8 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index, uint16_t wLength){
 }
 
 
-static void print_setup_packet(struct usb_setup_packet *packet){
-    aprintf("bmRequestType:%x, bRequest:%x, wValue:%x, wIndex:%x, wLength:%x\n",
+static void print_setup_packet(struct usb_setup_packet *packet __attribute__((unused))){
+    log_printf("bmRequestType:%x, bRequest:%x, wValue:%x, wIndex:%x, wLength:%x\n",
              packet->bmRequestType,
              packet->bRequest,
              packet->wValue,
@@ -266,19 +276,19 @@ static void usb_ctrl_get_descriptor_rqst_handler(struct usb_setup_packet *packet
 
     switch (packet->wValue >> 8) {
 	case USB_DESC_DEVICE:
-		aprintf("Device descriptor Rqst\n");
+		log_printf("Device descriptor Rqst\n");
 		usb_ctrl_device_desc_rqst_handler(packet->wLength);
 		break;
 	case USB_DESC_CONFIG:
-		aprintf("Configuration descriptor Rqst\n");
+		log_printf("Configuration descriptor Rqst\n");
 		usb_ctrl_configuration_desc_rqst_handler(packet->wLength);
 		break;
 	case USB_DESC_STRING:
-		aprintf("String descriptor Rqst, Index: %x\n", (packet->wValue & 0xff));
+		log_printf("String descriptor Rqst, Index: %x\n", (packet->wValue & 0xff));
 		usb_ctrl_string_desc_rqst_handler(packet->wValue & 0xff, packet->wLength);
 		break;
 	case USB_DESC_FUNCT:
-		aprintf("Functional descriptor Rqst\n");
+		log_printf("Functional descriptor Rqst\n");
 		usb_ctrl_functional_desc_rqst_handler(packet->wLength);
 		break;
     case USB_DESC_DEVQUAL:
@@ -325,7 +335,7 @@ static void usb_ctrl_standard_rqst_handler(struct usb_setup_packet *packet){
 
     case USB_RQST_GET_STATUS:
         // FIXME Work around
-        aprintf("USB_RQST_GET_STATUS\n");
+        log_printf("USB_RQST_GET_STATUS\n");
 		usb_driver_setup_send("\x00\x00", 2, EP0);
 		usb_driver_setup_read_status();
         break;
