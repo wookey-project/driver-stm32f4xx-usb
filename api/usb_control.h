@@ -205,6 +205,7 @@ typedef void (*cb_set_configuration_rqst_handler_t) (int);
 typedef void (*cb_set_interface_rqst_handler_t) (int);
 typedef void (*cb_mft_string_rqst_handler_t) (uint16_t wLength);
 typedef void (*cb_mft_string_rqst_handler_t) (uint16_t wLenght);
+typedef void (*cb_reset_handler_t) (void);
 
 typedef struct __packed usb_ctrl_callbacks {
     cb_class_rqst_handler_t             class_rqst_handler;
@@ -213,6 +214,7 @@ typedef struct __packed usb_ctrl_callbacks {
     cb_set_interface_rqst_handler_t     set_interface_rqst_handler;
     cb_functional_rqst_desc_t           functional_rqst_handler;
     cb_mft_string_rqst_handler_t        mft_string_rqst_handler;
+    cb_reset_handler_t                  reset_handler;
 } usb_ctrl_callbacks_t;
 
 
@@ -296,6 +298,10 @@ typedef enum {
 
 #endif
 
+void usb_ctrl_handle_reset(void);
 
+bool usb_ctrl_is_initphase_done(void);
+
+void usb_ctrl_set_initphase_done(void);
 
 #endif /* !_USB_CONTROL_H */

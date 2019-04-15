@@ -19,6 +19,46 @@
 #define log_printf(...) {};
 #endif
 
+/*
+ * This flag inform the stack of the current USB Control state.
+ * At the end of the enumeration, when the first upper stack command
+ * execution (first DFU command, first SCSI command, and so on), this
+ * flag must be set to true to inform the control stack that the
+ * enumeration stack is complete.
+ *
+ * Why doing this:
+ * 1) the enumeration state sequence is variable depending on the host
+ *    OS stack and its end can't be detected at this layer of the USB
+ *    stack
+ * 2) USB reset reception in the enumeration phase and the nominal phase
+ *    has different consequences. In enumeration phase, the reset request
+ *    is usually a 'standard' behavior of some host stacks to ensure
+ *    synchronization of host and device stacks. On nominal phase, USB
+ *    reset is the consequence of an error and has to be handled on the
+ *    overall device software, which is, on devices such as Wookey, clearly
+ *    more complex than a basic stack reset and enumeration.
+ *
+ * How handling this ?
+ * Whatever the stack being executed above the USB driver low level control
+ * stack, this stack should inform the driver that it has received it first
+ * command (DFU, SCSI, HID...). Receiving this command means that the
+ * enumeration is fully complete.
+ *
+ * TODO: By now, the low level control library and the driver are hosted
+ * in the same dir. The goal is to implement a real 'libcontrol' and
+ * 'libbulk' libraries, independent of the USB device driver.
+ */
+static bool usb_init_phase_done = false;
+
+bool usb_ctrl_is_initphase_done(void)
+{
+    return usb_init_phase_done;
+}
+
+void usb_ctrl_set_initphase_done(void)
+{
+    usb_init_phase_done = true;
+}
 
 
 //#include "usb_device.h"
@@ -137,6 +177,10 @@ static void usb_ctrl_default_functional_desc_rqst_handler(uint16_t wLength){
     aprintf("usb_ctrl_cbs.functional_rqst_handler is not defined, wlength:%d\n", wLength);
 }
 
+static void usb_ctrl_default_reset_handler(void) {
+    return;
+}
+
 
 /**
  * \brief usb_ctrl_callbacks defined at usb class level and called from usb_ctrl
@@ -148,7 +192,19 @@ usb_ctrl_callbacks_t usb_ctrl_callbacks = {
         .set_configuration_rqst_handler = usb_ctrl_default_set_configuration_rqst_handler,
         .set_interface_rqst_handler     = usb_ctrl_default_set_interface_rqst_handler,
         .functional_rqst_handler        = usb_ctrl_default_functional_desc_rqst_handler,
+        .reset_handler                  = usb_ctrl_default_reset_handler,
 };
+
+
+void usb_ctrl_handle_reset(void)
+{
+    /* calling default (or configured) reset handler. This
+     * handler is called only for reset requests sent after
+     * the enumeration step (reset due to error) */
+    usb_ctrl_callbacks.reset_handler();
+    return;
+}
+
 
 
 /**

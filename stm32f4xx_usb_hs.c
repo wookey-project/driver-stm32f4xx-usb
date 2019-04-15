@@ -1242,6 +1242,17 @@ static void rxflvl_handler(void)
  */
 static void ep_init_reset(void)
 {
+ 	uint8_t epnum = (read_reg_value(r_CORTEX_M_USB_HS_GRXSTSP) & 0xf);
+    if (epnum == 0 && usb_ctrl_is_initphase_done()) {
+        /* We received an USB reset request on EP0 from the host, while
+         * we are no more in enumeration state
+         * In that case, as the driver has no state or knowledge of
+         * the above stack specification, the reset handling is
+         * passed to the libcontrol. */
+        usb_ctrl_handle_reset();
+        return;
+    }
+
 #if 1
     // FIXME MR We should check if the ep is IN/OUT
 	set_reg(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP0), 1, USB_HS_DOEPCTL_SNAK);
