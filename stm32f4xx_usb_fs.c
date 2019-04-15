@@ -14,7 +14,7 @@
 #include "api/stdio.h"
 #include "api/nostd.h"
 #include "api/string.h"
-#include "generated/usb_otg_fs.h";
+#include "generated/usb_otg_fs.h"
 
 /*
  * This should be replaced in Kconfig and source:
