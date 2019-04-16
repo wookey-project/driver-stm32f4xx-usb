@@ -1243,6 +1243,7 @@ static void rxflvl_handler(void)
 static void ep_init_reset(void)
 {
  	uint8_t epnum = (read_reg_value(r_CORTEX_M_USB_HS_GRXSTSP) & 0xf);
+    aprintf("reset on ep %d, init phase %d\n", epnum, usb_ctrl_is_initphase_done());
     if (epnum == 0 && usb_ctrl_is_initphase_done()) {
         /* We received an USB reset request on EP0 from the host, while
          * we are no more in enumeration state

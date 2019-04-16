@@ -457,6 +457,9 @@ void usb_ctrl_init( usb_ctrl_callbacks_t cbs,
         if (cbs.mft_string_rqst_handler != NULL){
             usb_ctrl_callbacks.mft_string_rqst_handler = cbs.mft_string_rqst_handler;
         }
+        if (cbs.reset_handler != NULL){
+            usb_ctrl_callbacks.reset_handler = cbs.reset_handler;
+        }
 
         usb_ctrl_device_desc = device_desc;
         usb_ctrl_conf_desc = conf_desc;
