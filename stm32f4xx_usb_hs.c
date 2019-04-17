@@ -11,10 +11,10 @@
 #include "stm32f4xx_usb_hs.h"
 #include "stm32f4xx_usb_hs_regs.h"
 #include "api/usb_control.h"
-#include "api/syscall.h"
-#include "api/stdio.h"
-#include "api/nostd.h"
-#include "api/string.h"
+#include "libc/syscall.h"
+#include "libc/stdio.h"
+#include "libc/nostd.h"
+#include "libc/string.h"
 #include "generated/usb_otg_hs.h"
 
 #define ZERO_LENGTH_PACKET 0

@@ -4,8 +4,8 @@
 #ifndef _USB_CONTROL_H
 #define _USB_CONTROL_H
 
-#include "api/types.h"
-#include "api/regutils.h"
+#include "libc/types.h"
+#include "libc/regutils.h"
 
 #define LANGUAGE_ENGLISH        0x0409
 

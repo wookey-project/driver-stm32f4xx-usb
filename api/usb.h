@@ -1,7 +1,7 @@
 #ifndef STM32F4XX_USB_H
 #define STM32F4XX_USB_H
 
-#include "api/types.h"
+#include "libc/types.h"
 #include "autoconf.h"
 
 #ifdef CONFIG_USR_DRV_USB_FS

@@ -1,8 +1,8 @@
 #ifndef STM32F4XX_USB_HS_REGS_H
 # define STM32F4XX_USB_HS_REGS_H
 
-# include "api/regutils.h"
-# include "api/types.h"
+# include "libc/regutils.h"
+# include "libc/types.h"
 
 #define USB_HS_DIEPCTL0_MPSIZ_64BYTES      0
 #define USB_HS_DIEPCTL0_MPSIZ_32BYTES      1

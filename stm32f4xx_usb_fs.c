@@ -10,10 +10,10 @@
 //#include "stm32f4xx_exti.h"
 #include "autoconf.h"
 #ifdef CONFIG_USR_DRV_USB_FS
-#include "api/syscall.h"
-#include "api/stdio.h"
-#include "api/nostd.h"
-#include "api/string.h"
+#include "libc/syscall.h"
+#include "libc/stdio.h"
+#include "libc/nostd.h"
+#include "libc/string.h"
 #include "generated/usb_otg_fs.h"
 
 /*

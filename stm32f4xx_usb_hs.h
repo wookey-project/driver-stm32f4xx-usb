@@ -4,8 +4,8 @@
 #include "autoconf.h"
 #ifdef CONFIG_USR_DRV_USB_HS
 
-#include "api/regutils.h"
-#include "api/types.h"
+#include "libc/regutils.h"
+#include "libc/types.h"
 #include "stm32f4xx_usb_hs_regs.h"
 #include "api/usb_control.h"
 #include "api/usb.h"

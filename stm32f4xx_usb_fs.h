@@ -4,7 +4,7 @@
 #include "autoconf.h"
 #ifdef CONFIG_USR_DRV_USB_FS
 //#include "helpers.h"
-#include "api/regutils.h"
+#include "libc/regutils.h"
 #include "stm32f4xx_usb_fs_regs.h"
 #include "api/usb.h"
 #include "api/usb_control.h"
