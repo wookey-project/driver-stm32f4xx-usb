@@ -1251,7 +1251,6 @@ static void ep_init_reset(void)
          * the above stack specification, the reset handling is
          * passed to the libcontrol. */
         usb_ctrl_handle_reset();
-        return;
     }
 
 #if 1
