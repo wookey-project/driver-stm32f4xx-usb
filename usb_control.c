@@ -77,20 +77,24 @@ static void usb_ctrl_init_structures(void)
  * \brief Send device descriptor.
  */
 static void usb_ctrl_device_desc_rqst_handler(uint16_t wLength){
+
 	log_printf("wLength:%d - sizeof(usb_ctrl_device_desc):%d\n", wLength, sizeof(usb_ctrl_device_desc));
+
     if ( wLength == 0 ){
         usb_driver_setup_send_status(0);
         usb_driver_setup_read_status();
-        return;
+        goto end;
     }
 
     if ( wLength > sizeof(usb_ctrl_device_desc)){
         usb_driver_setup_send((uint8_t *)&usb_ctrl_device_desc, sizeof(usb_ctrl_device_desc), EP0);
-    }else{
+    } else {
         usb_driver_setup_send((uint8_t *)&usb_ctrl_device_desc, wLength, EP0);
     }
-
     usb_driver_setup_read_status();
+
+end:
+    return;
 }
 
 /**
@@ -99,21 +103,25 @@ static void usb_ctrl_device_desc_rqst_handler(uint16_t wLength){
  * @param wLength Descriptor length.
  */
 static void usb_ctrl_configuration_desc_rqst_handler(uint16_t wLength){
+
 	log_printf("wLength:%d - sizeof(usb_ctrl_device_desc):%d\n", wLength, usb_ctrl_conf_desc.config_desc.wTotalLength);
-    if ( wLength == 0 ){
+
+    if ( wLength == 0 ) {
         usb_driver_setup_send_status(0);
         usb_driver_setup_read_status();
-        return;
+        goto end;
     }
 
-    if ( wLength > usb_ctrl_conf_desc.config_desc.wTotalLength ){
+    if ( wLength > usb_ctrl_conf_desc.config_desc.wTotalLength ) {
         usb_driver_setup_send((uint8_t *)&usb_ctrl_conf_desc,
                                     usb_ctrl_conf_desc.config_desc.wTotalLength , EP0);
-    }else{
+    } else {
         usb_driver_setup_send((uint8_t *)&usb_ctrl_conf_desc, wLength, EP0);
-
     }
     usb_driver_setup_read_status();
+
+end:
+    return;
 }
 
 
@@ -260,10 +268,10 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index, uint16_t wLength){
 	uint32_t len;
 	usb_string_descriptor_t string_desc;
 
-    if ( wLength == 0 ){
+    if ( wLength == 0 ) {
         usb_driver_setup_send_status(0);
         usb_driver_setup_read_status();
-        return;
+        goto end;
     }
 
 
@@ -271,8 +279,8 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index, uint16_t wLength){
 	switch (index) {
 	case 0:
 		string_desc.bLength = 4;
-		string_desc.wString[0] = LANGUAGE_ENGLISH;
-			break;
+        string_desc.wString[0] = LANGUAGE_ENGLISH;
+        break;
 	case CONFIG_USB_DEV_MANUFACTURER_INDEX:
 		len = sizeof(CONFIG_USB_DEV_MANUFACTURER);
 		string_desc.bLength = 2 + 2 * len;
@@ -288,8 +296,9 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index, uint16_t wLength){
 	case CONFIG_USB_DEV_SERIAL_INDEX:
 		len = sizeof(CONFIG_USB_DEV_SERIAL);
 		string_desc.bLength = 2 + 2 * len;
-		for (i = 0; i < len; i++)
+		for (i = 0; i < len; i++) {
 			string_desc.wString[i] = CONFIG_USB_DEV_SERIAL[i];
+        }
 		break;
 	case STRING_MICROSOFT_INDEX:
         log_printf("STRING_MICROSOFT_INDEX");
@@ -299,15 +308,18 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index, uint16_t wLength){
 		/* TODO: send error status */
 		aprintf("Invalid string index\n");
         usb_driver_stall_in(EP0);
-        return;
+        goto end;
 	}
 
-    if ( wLength > string_desc.bLength){
+    if ( wLength > string_desc.bLength) {
     	usb_driver_setup_send((uint8_t *)&string_desc, string_desc.bLength, EP0);
-    }else{
+    } else {
         usb_driver_setup_send((uint8_t *)&string_desc, wLength, EP0);
     }
     usb_driver_setup_read_status();
+
+end:
+    return;
 }
 
 
@@ -358,7 +370,9 @@ static void usb_ctrl_get_descriptor_rqst_handler(struct usb_setup_packet *packet
 		usb_driver_setup_send_status(0);
 		usb_driver_setup_read_status();
 		aprintf("Unhandled descriptor Rqst: %x\n", packet->wValue >> 8);
+        break;
 	}
+    return;
 }
 
 
@@ -398,7 +412,9 @@ static void usb_ctrl_standard_rqst_handler(struct usb_setup_packet *packet){
 	default:
 		aprintf("Unhandled std request: %x\n", packet->bRequest);
         usb_driver_stall_in(EP0);
+        break;
 	}
+    return;
 }
 
 
@@ -422,7 +438,9 @@ void usb_ctrl_handler(struct usb_setup_packet *packet){
 		break;
 	default:
 		aprintf("Unhandled request type: %x\n",(packet->bmRequestType >> 5) & 0x3);
+        break;
 	}
+    return;
 }
 
 
