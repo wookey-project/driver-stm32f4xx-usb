@@ -204,7 +204,6 @@ typedef void (*cb_vendor_rqst_handler_t) (struct usb_setup_packet *);
 typedef void (*cb_set_configuration_rqst_handler_t) (int);
 typedef void (*cb_set_interface_rqst_handler_t) (int);
 typedef void (*cb_mft_string_rqst_handler_t) (uint16_t wLength);
-typedef void (*cb_mft_string_rqst_handler_t) (uint16_t wLenght);
 typedef void (*cb_reset_handler_t) (void);
 
 typedef struct __packed usb_ctrl_callbacks {
