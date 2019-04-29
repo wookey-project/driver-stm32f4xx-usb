@@ -15,7 +15,6 @@
 #include "libc/stdio.h"
 #include "libc/nostd.h"
 #include "libc/string.h"
-#include "generated/usb_otg_hs.h"
 
 #define ZERO_LENGTH_PACKET 0
 #define OUT_NAK		0x01

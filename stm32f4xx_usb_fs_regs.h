@@ -2,6 +2,7 @@
 #define STM32F4XX_USB_FS_REGS_H
 
 #include "libc/regutils.h"
+#include "generated/usb_otg_fs.h"
 
 #if 1 // MR DEBUG
 #define USB_FS_DIEPCTL0_MPSIZ_64BYTES      0
@@ -20,7 +21,6 @@
 
 
 #define AHB2_BASE           0x50000000
-#define USB_OTG_FS_BASE         (AHB2_BASE + 0x0)
 
 /* The following registers addresses are defined as soon as they are needed */
 #define r_CORTEX_M_USB_FS_GOTGCTL   REG_ADDR(USB_OTG_FS_BASE + 0x000)

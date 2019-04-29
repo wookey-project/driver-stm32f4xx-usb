@@ -3,6 +3,7 @@
 
 # include "libc/regutils.h"
 # include "libc/types.h"
+#include "generated/usb_otg_hs.h"
 
 #define USB_HS_DIEPCTL0_MPSIZ_64BYTES      0
 #define USB_HS_DIEPCTL0_MPSIZ_32BYTES      1
@@ -17,8 +18,6 @@
 #define USB_HS_DOEPCTL_EPTYP_BULK          2
 #define USB_HS_DOEPCTL_EPTYP_INT           3
 
-
-# define USB_OTG_HS_BASE			(0x40040000)
 
 /* Only registers needed for device mode are defined */
 # define r_CORTEX_M_USB_HS_GOTGCTL		REG_ADDR(USB_OTG_HS_BASE + 0x000)
