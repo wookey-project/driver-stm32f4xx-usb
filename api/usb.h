@@ -19,9 +19,9 @@ typedef enum {
     USB_ERROR_BAD_INPUT = 2,
     USB_ERROR_RANGE = 3,
     USB_ERROR_NOT_SUPORTED = 4,
-    USB_ERROR_ALREADY_ACTIVE,
-    USB_ERROR_NOT_ACTIVE,
-    USB_ERROR_NO_SPACE
+    USB_ERROR_ALREADY_ACTIVE = 5,
+    USB_ERROR_NOT_ACTIVE = 6,
+    USB_ERROR_NO_SPACE = 7
 } usb_ep_error_t;
 
 void usb_driver_early_init(void (*data_received)(uint32_t), void (*data_sent)(void));

@@ -99,7 +99,7 @@ static usb_ep_error_t usb_hs_driver_TXFIFO_flush(uint8_t ep){
     		if (++count > USB_REG_CHECK_TIMEOUT){
     			log_printf("HANG! Waiting for the core to clear the TxFIFO Flush bit GRSTCTL:TXFFLSH\n");
 		}
-		return -USB_ERROR_BUSY;
+		return USB_ERROR_BUSY;
 	}
 	/*
 	 * The application must write this bit only after checking that the core is neither writing to the
@@ -116,7 +116,7 @@ static usb_ep_error_t usb_hs_driver_TXFIFO_flush(uint8_t ep){
         	if (++count > USB_REG_CHECK_TIMEOUT){
 		    log_printf("HANG! Waiting for the core to clear the TxFIFO Flush bit GRSTCTL:TXFFLSH\n");
 		}
-        	return -USB_ERROR_BUSY;
+        	return USB_ERROR_BUSY;
 	}
 	return 0;
 }
@@ -145,7 +145,7 @@ static usb_ep_error_t usb_hs_driver_RXFIFO_flush(void){
         if (++count > USB_REG_CHECK_TIMEOUT){
 		    log_printf("HANG! Waiting for the core to clear the TxFIFO Flush bit GRSTCTL:RXFFLSH\n");
 	}
-        return -USB_ERROR_BUSY;
+        return USB_ERROR_BUSY;
     }
     /*
      * The application must write this bit only after checking that the core is neither writing to the
@@ -161,7 +161,7 @@ static usb_ep_error_t usb_hs_driver_RXFIFO_flush(void){
 	while (get_reg(r_CORTEX_M_USB_HS_GRSTCTL, USB_HS_GRSTCTL_RXFFLSH)){
         if (++count > USB_REG_CHECK_TIMEOUT)
 		    log_printf("HANG! Waiting for the core to clear the RxFIFO Flush bit GRSTCTL:TXFFLSH\n");
-        return -USB_ERROR_BUSY;
+        return USB_ERROR_BUSY;
     }
     return 0;
 }
@@ -399,18 +399,18 @@ usb_ep_error_t usb_hs_driver_in_endpoint_activate(usb_ep_t *ep)
     /* Sanitization check */
     if (!ep) {
         log_printf("EP%d is not initialized \n", ep->num);
-        return -USB_ERROR_BAD_INPUT;
+        return USB_ERROR_BAD_INPUT;
     }
 
     /* Checking if enpoint is already active */
     if (get_reg(r_CORTEX_M_USB_HS_DIEPCTL(ep->num), USB_HS_DIEPCTL_EPENA)) {
-        return -USB_ERROR_ALREADY_ACTIVE;
+        return USB_ERROR_ALREADY_ACTIVE;
     }
 
 	/* Maximum packet size */
     if ((size_from_mpsize(ep) <= 0) || size_from_mpsize(ep) > MAX_DATA_PACKET_SIZE(ep->num)) {
         log_printf("EP%d bad maxpacket size: %d\n", ep->num, size_from_mpsize(ep));
-        return -USB_ERROR_RANGE;
+        return USB_ERROR_RANGE;
     }
 
 	set_reg_value(r_CORTEX_M_USB_HS_DIEPCTL(ep->num), ep->max_packet_size,
@@ -419,7 +419,7 @@ usb_ep_error_t usb_hs_driver_in_endpoint_activate(usb_ep_t *ep)
     /* Define endpoint type */
     if (ep->type == USB_HS_DXEPCTL_EPTYP_ISOCHRO) {
         log_printf("EP%d Isochronous is not suported yet\n", ep->num);
-        return -USB_ERROR_NOT_SUPORTED;
+        return USB_ERROR_NOT_SUPORTED;
     }
 
 	set_reg(r_CORTEX_M_USB_HS_DIEPCTL(ep->num), ep->type, USB_HS_DIEPCTL_EPTYP);
@@ -493,7 +493,7 @@ usb_ep_error_t usb_hs_driver_out_endpoint_deactivate(uint8_t ep){
 
     /* Sanitization check */
     if ((ep <= 0) || (ep > 3)) {
-        return -USB_ERROR_BAD_INPUT;
+        return USB_ERROR_BAD_INPUT;
     }
 
     /* Checking if enpoint is active */
@@ -522,7 +522,7 @@ usb_ep_error_t usb_hs_driver_in_endpoint_deactivate(uint8_t ep){
 
     /* Sanitization check */
     if ((ep <= 0) || (ep > 3)) {
-        return -USB_ERROR_BAD_INPUT;
+        return USB_ERROR_BAD_INPUT;
     }
 
     /* Checking if enpoint is active */
@@ -632,7 +632,7 @@ usb_ep_error_t usb_hs_driver_stall_in(uint8_t ep){
         if (++count > USB_REG_CHECK_TIMEOUT){
 		    log_printf("HANG! DIEPCTL:EPENA\n");
 	}
-        return -USB_ERROR_BUSY;
+        return USB_ERROR_BUSY;
     }
 
 	/* Disable IN EP and set STALL bit */
@@ -652,7 +652,7 @@ usb_ep_error_t usb_hs_driver_stall_in(uint8_t ep){
         	if (++count > USB_REG_CHECK_TIMEOUT){
 		    log_printf("HANG! GINTSTS:GINAKEFF\n");
 		}
-      	  return -USB_ERROR_BUSY;
+      	  return USB_ERROR_BUSY;
     	}
 
 	set_reg(r_CORTEX_M_USB_HS_GRSTCTL, 1, USB_HS_GRSTCTL_AHBIDL);
@@ -716,7 +716,7 @@ static usb_ep_error_t usb_otg_hs_core_reset(void)
 	        if (++count > USB_REG_CHECK_TIMEOUT){
 			log_printf("HANG! AHB Idle GRSTCTL:AHBIDL\n");
 		}
-		return -USB_ERROR_BUSY;
+		return USB_ERROR_BUSY;
     }
 
 	/* Core soft reset */
@@ -725,7 +725,7 @@ static usb_ep_error_t usb_otg_hs_core_reset(void)
         	if (++count > USB_REG_CHECK_TIMEOUT){
 			log_printf("HANG! Core Soft RESET\n");
         	}
-        	return -USB_ERROR_BUSY;
+        	return USB_ERROR_BUSY;
 	}
 
 	/* Wait for 3 PHY Clocks */
