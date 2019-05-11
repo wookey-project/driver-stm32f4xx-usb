@@ -893,18 +893,18 @@ static void _read_fifo(volatile uint8_t *dest, volatile uint32_t size, uint8_t e
 	//disable_irq();
 
 	for (i = 0; i < size_4bytes; i++, dest += 4){
-		*(uint32_t *)dest = *USB_FS_DEVICE_FIFO(ep);
+		*(uint32_t *)dest = *(USB_FS_DEVICE_FIFO(ep));
 	}
 
 	switch (size % 4) {
 	case 1:
-		*dest = *USB_FS_DEVICE_FIFO(ep) & 0xff;
+		*dest = (*(USB_FS_DEVICE_FIFO(ep))) & 0xff;
 		break;
 	case 2:
-		*(uint16_t *)dest = *USB_FS_DEVICE_FIFO(ep) & 0xffff;
+		*(uint16_t *)dest = (*(USB_FS_DEVICE_FIFO(ep))) & 0xffff;
 		break;
 	case 3:
-		tmp = *USB_FS_DEVICE_FIFO(ep);
+		tmp = *(USB_FS_DEVICE_FIFO(ep));
 		dest[0] = tmp & 0xff;
 		dest[1] = (tmp >> 8) & 0xff;
 		dest[2] = (tmp >> 16) & 0xff;
