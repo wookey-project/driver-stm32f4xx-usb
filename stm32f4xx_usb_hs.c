@@ -1694,19 +1694,19 @@ static void _write_fifo(const void *src, uint32_t size, uint8_t ep)
     //disable_irq();
 
     for (i = 0; i < size_4bytes; i++, src += 4){
-        write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint32_t *)src);
+        write_reg_value(USB_HS_DEVICE_FIFO(ep), *(const uint32_t *)src);
     }
     switch (size & 3) {
         case 1:
-            write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint8_t *)src);
+            write_reg_value(USB_HS_DEVICE_FIFO(ep), *(const uint8_t *)src);
             break;
         case 2:
-            write_reg_value(USB_HS_DEVICE_FIFO(ep), *(uint16_t *)src);
+            write_reg_value(USB_HS_DEVICE_FIFO(ep), *(const uint16_t *)src);
             break;
         case 3:
-            tmp  = ((uint8_t*) src)[0];
-            tmp |= ((uint8_t*) src)[1] << 8;
-            tmp |= ((uint8_t*) src)[2] << 16;
+            tmp  = ((const uint8_t*) src)[0];
+            tmp |= ((const uint8_t*) src)[1] << 8;
+            tmp |= ((const uint8_t*) src)[2] << 16;
             write_reg_value(USB_HS_DEVICE_FIFO(ep), tmp);
             break;
         default:

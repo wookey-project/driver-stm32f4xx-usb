@@ -263,7 +263,7 @@ typedef enum {
 
 #ifdef CONFIG_USR_DRV_USB_HS
 
-# define MAX_DATA_PACKET_SIZE(ep) ((ep == 0) ? 64 : 512)
+# define MAX_DATA_PACKET_SIZE(ep) (((ep) == 0) ? 64 : 512)
 
 typedef enum {
     USB_HS_DXEPCTL_EP0 = 0,
