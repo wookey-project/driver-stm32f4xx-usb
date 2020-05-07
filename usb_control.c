@@ -11,6 +11,9 @@
 #include "libc/nostd.h"
 #include "libc/string.h"
 
+#include "libc/syscall.h"
+#include "libc/sanhandlers.h"
+
 #define USB_CTRL_DEBUG 0
 
 #if USB_CTRL_DEBUG
@@ -202,14 +205,27 @@ usb_ctrl_callbacks_t usb_ctrl_callbacks = {
         .functional_rqst_handler        = usb_ctrl_default_functional_desc_rqst_handler,
         .reset_handler                  = usb_ctrl_default_reset_handler,
 };
-
+/* Register our callbacks */
+ADD_GLOB_HANDLER(usb_ctrl_default_class_rqst_handler)
+ADD_GLOB_HANDLER(usb_ctrl_default_vendor_rqst_handler)
+ADD_GLOB_HANDLER(usb_ctrl_default_set_configuration_rqst_handler)
+ADD_GLOB_HANDLER(usb_ctrl_default_set_interface_rqst_handler)
+ADD_GLOB_HANDLER(usb_ctrl_default_functional_desc_rqst_handler)
+ADD_GLOB_HANDLER(usb_ctrl_default_reset_handler)
 
 void usb_ctrl_handle_reset(void)
 {
     /* calling default (or configured) reset handler. This
      * handler is called only for reset requests sent after
      * the enumeration step (reset due to error) */
-    usb_ctrl_callbacks.reset_handler();
+    /* Sanity check our callback before calling it */
+    if(handler_sanity_check((void*)usb_ctrl_callbacks.reset_handler)){
+        sys_exit();
+        return;
+    }
+    else{
+        usb_ctrl_callbacks.reset_handler();
+    }
     return;
 }
 
@@ -223,7 +239,14 @@ void usb_ctrl_handle_reset(void)
  * @param packet Setup packet
  */
 static void usb_ctrl_class_rqst_handler(struct usb_setup_packet *packet){
-    usb_ctrl_callbacks.class_rqst_handler(packet);
+    /* Sanity check our callback before calling it */
+    if(handler_sanity_check((void*)usb_ctrl_callbacks.class_rqst_handler)){
+        sys_exit();
+        return;
+    }
+    else{
+        usb_ctrl_callbacks.class_rqst_handler(packet);
+    }
 }
 
 
@@ -235,20 +258,48 @@ static void usb_ctrl_class_rqst_handler(struct usb_setup_packet *packet){
  * @param packet Setup packet
  */
 static void usb_ctrl_vendor_rqst_handler(struct usb_setup_packet *packet){
-    usb_ctrl_callbacks.vendor_rqst_handler(packet);
+    /* Sanity check our callback before calling it */
+    if(handler_sanity_check((void*)usb_ctrl_callbacks.vendor_rqst_handler)){
+        sys_exit();
+        return;
+    }
+    else{
+        usb_ctrl_callbacks.vendor_rqst_handler(packet);
+    }
 }
 
 static void usb_ctrl_set_interface_rqst_handler(int iface){
-    usb_ctrl_callbacks.set_interface_rqst_handler(iface);
+    /* Sanity check our callback before calling it */
+    if(handler_sanity_check((void*)usb_ctrl_callbacks.set_interface_rqst_handler)){
+        sys_exit();
+        return;
+    }
+    else{
+        usb_ctrl_callbacks.set_interface_rqst_handler(iface);
+    }
 }
 
 static void usb_ctrl_set_configuration_rqst_handler(int conf){
-    usb_ctrl_callbacks.set_configuration_rqst_handler(conf);
+    /* Sanity check our callback before calling it */
+    if(handler_sanity_check((void*)usb_ctrl_callbacks.set_configuration_rqst_handler)){
+        sys_exit();
+        return;
+    }
+    else{
+        usb_ctrl_callbacks.set_configuration_rqst_handler(conf);
+    }
 }
 
 
 static void usb_ctrl_functional_desc_rqst_handler(uint16_t wLength){
-    usb_ctrl_callbacks.functional_rqst_handler(wLength);
+    /* Sanity check our callback before calling it */
+    if(handler_sanity_check((void*)usb_ctrl_callbacks.functional_rqst_handler)){
+        sys_exit();
+        return;
+    }
+    else{
+        usb_ctrl_callbacks.functional_rqst_handler(wLength);
+    }
 }
 
 
@@ -301,8 +352,15 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index, uint16_t wLength){
         }
 		break;
 	case STRING_MICROSOFT_INDEX:
-        log_printf("STRING_MICROSOFT_INDEX");
-        usb_ctrl_callbacks.mft_string_rqst_handler(wLength);
+        	log_printf("STRING_MICROSOFT_INDEX");
+	       /* Sanity check our callback before calling it */
+	      if(handler_sanity_check((void*)usb_ctrl_callbacks.mft_string_rqst_handler)){
+	 	        sys_exit();
+		        return;
+	      }
+	      else{
+	        usb_ctrl_callbacks.mft_string_rqst_handler(wLength);
+	      }
 		break;
 	default:
 		/* TODO: send error status */

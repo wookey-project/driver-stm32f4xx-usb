@@ -15,6 +15,7 @@
 #include "libc/stdio.h"
 #include "libc/nostd.h"
 #include "libc/string.h"
+#include "libc/sanhandlers.h"
 
 #define ZERO_LENGTH_PACKET 0
 #define OUT_NAK		0x01
@@ -923,10 +924,14 @@ static void usb_otg_hs_ulpi_hard_reset(void)
 static void placeholder_data_received(uint32_t dummy __attribute__((unused)))
 {
 }
+/* Register our callback */
+ADD_GLOB_HANDLER(placeholder_data_received)
 
 static void placeholder_data_sent(void)
 {
 }
+/* Register our callback */
+ADD_GLOB_HANDLER(placeholder_data_sent)
 
 void usb_hs_driver_early_init(void (*data_received)(uint32_t), void (*data_sent)(void))
 {
@@ -1168,7 +1173,14 @@ static void rxflvl_handler(void)
                                 /* In case of EP0, we have to manually check the completion and call the callback */
                                 if (buffer_ep0_idx == buffer_ep0_size) {
                                     buffer_ep0 = NULL;
-                                    usb_hs_callbacks.data_received_callback(buffer_ep0_idx);
+				    /* Sanity check our callback before calling it */
+		  		    if(handler_sanity_check((void*)usb_hs_callbacks.data_received_callback)){
+					sys_exit();
+					return;
+				    }
+				    else{
+	                                usb_hs_callbacks.data_received_callback(buffer_ep0_idx);
+				    }
                                     buffer_ep0_idx = buffer_ep0_size = 0;
                                 }
                             }
@@ -1471,7 +1483,14 @@ static void iepint_handler(void)
             ep0_packets_sent = 1;
             /* Our callback */
             if (ep0_last_packet_sent == 1){
-                usb_hs_callbacks.data_sent_callback();
+		/* Sanity check callback before calling it */
+		if(handler_sanity_check((void*)usb_hs_callbacks.data_sent_callback)){
+			sys_exit();
+			return;
+		}
+		else{
+	                usb_hs_callbacks.data_sent_callback();
+		}
             }
         }
     }
@@ -1507,7 +1526,14 @@ static void iepint_handler(void)
         /* Bit 2 XFRC: Transfer completed interrupt */
         if (diepint2 & USB_HS_DIEPINT_XFRC_Msk) {
             set_reg_bits(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP2), USB_HS_DIEPINT_XFRC_Msk);
-            usb_hs_callbacks.data_sent_callback();
+	    /* Sanity check our callback before calling it */
+   	    if(handler_sanity_check((void*)usb_hs_callbacks.data_sent_callback)){
+		sys_exit();
+	 	return;
+	    }
+	    else{
+                usb_hs_callbacks.data_sent_callback();
+            }
         }
 
     }
@@ -1553,7 +1579,14 @@ static void oepint_handler(void)
             set_reg_bits(r_CORTEX_M_USB_HS_DOEPINT(USB_HS_DXEPCTL_EP1), USB_HS_DOEPINT_XFRC_Msk);
             set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP1), USB_HS_DOEPCTL_SNAK_Msk); // WHERE in the datasheet ? In disabling an OUT ep (p1360)
             buffer_ep1 = NULL;
-            usb_hs_callbacks.data_received_callback(buffer_ep1_idx);
+	    /* Sanity check our callback before calling it */
+	    if(handler_sanity_check((void*)usb_hs_callbacks.data_received_callback)){
+		sys_exit();
+		return;
+	    }
+	    else{
+	        usb_hs_callbacks.data_received_callback(buffer_ep1_idx);
+	    }
             set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP0), USB_HS_DOEPCTL_CNAK_Msk);
             buffer_ep1_idx = 0;
         }
@@ -1839,7 +1872,14 @@ void usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
     /* If we are suspended, call ourself the callback and flush stuff */
     if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)) {
         usb_hs_driver_TXFIFO_flush_all();
-        usb_hs_callbacks.data_sent_callback();
+	/* Sanity check our callback before calling it */
+	if(handler_sanity_check((void*)usb_hs_callbacks.data_sent_callback)){
+		sys_exit();
+		return;
+	}
+	else{
+	        usb_hs_callbacks.data_sent_callback();
+	}
     }
 }
 
