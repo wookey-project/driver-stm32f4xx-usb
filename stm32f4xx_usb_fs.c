@@ -14,6 +14,7 @@
 #include "libc/stdio.h"
 #include "libc/nostd.h"
 #include "libc/string.h"
+#include "libc/sanhandlers.h"
 #include "generated/usb_otg_fs.h"
 
 /*
@@ -1072,7 +1073,14 @@ static void rxflvl_handler(void)
                                 if (buffer_ep0_idx == buffer_ep0_size) {
                                    buffer_ep0 = NULL;
                                    if (usb_fs_callbacks.data_received_callback) {
-                                        usb_fs_callbacks.data_received_callback(buffer_ep0_idx);
+					    /* Sanity check our callback before calling it */
+			  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_received_callback)){
+						sys_exit();
+						return;
+					    }
+				  	  else{
+	                                        usb_fs_callbacks.data_received_callback(buffer_ep0_idx);
+					  }
                                    }
                                    buffer_ep0_idx = buffer_ep0_size = 0;
                                 }
@@ -1371,7 +1379,14 @@ static void iepint_handler(void)
                         /* Our callback */
                         if(ep0_last_packet_sent == 1){
                                 if (usb_fs_callbacks.data_sent_callback){
+				    /* Sanity check our callback before calling it */
+		  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_sent_callback)){
+					sys_exit();
+					return;
+				    }
+				    else{
                                         usb_fs_callbacks.data_sent_callback();
+				    }
                                 }
                         }
 		}
@@ -1409,7 +1424,14 @@ static void iepint_handler(void)
 		if (diepint2 & USB_FS_DIEPINT_XFRC_Msk) {
 			set_reg_bits(r_CORTEX_M_USB_FS_DIEPINT(USB_FS_DXEPCTL_EP2), USB_FS_DIEPINT_XFRC_Msk);
 			if (usb_fs_callbacks.data_sent_callback)
-				usb_fs_callbacks.data_sent_callback();
+				    /* Sanity check our callback before calling it */
+		  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_sent_callback)){
+					sys_exit();
+					return;
+				    }
+				    else{
+					usb_fs_callbacks.data_sent_callback();
+				    }
 		}
 
 	}
@@ -1456,7 +1478,14 @@ static void oepint_handler(void)
                         set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP1), USB_FS_DOEPCTL_SNAK_Msk); // WHERE in the datasheet ? In disabling an OUT ep (p1360)
                         buffer_ep1 = NULL;
                         if (usb_fs_callbacks.data_received_callback) {
-                                usb_fs_callbacks.data_received_callback(buffer_ep1_idx);
+				    /* Sanity check our callback before calling it */
+		  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_received_callback)){
+					sys_exit();
+					return;
+				    }
+				    else{
+	                                usb_fs_callbacks.data_received_callback(buffer_ep1_idx);
+				    }
                         }
                         set_reg_bits(r_CORTEX_M_USB_FS_DOEPCTL(USB_FS_DXEPCTL_EP0), USB_FS_DOEPCTL_CNAK_Msk);
                         buffer_ep1_idx = 0;
@@ -1765,7 +1794,14 @@ void usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep)
         if(get_reg(r_CORTEX_M_USB_FS_DSTS, USB_FS_DSTS_SUSPSTS)){
                 usb_fs_driver_TXFIFO_flush_all();
                 if (usb_fs_callbacks.data_sent_callback){
+ 		    /* Sanity check our callback before calling it */
+  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_sent_callback)){
+			sys_exit();
+			return;
+		    }
+		    else{
                         usb_fs_callbacks.data_sent_callback();
+		    }
                 }
         }
 
