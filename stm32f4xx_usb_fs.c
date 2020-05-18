@@ -1074,8 +1074,7 @@ static void rxflvl_handler(void)
                                    buffer_ep0 = NULL;
                                    if (usb_fs_callbacks.data_received_callback) {
 					    /* Sanity check our callback before calling it */
-			  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_received_callback)){
-						sys_exit();
+			  		    if(handler_sanity_check_with_panic((physaddr_t)usb_fs_callbacks.data_received_callback)){
 						return;
 					    }
 				  	  else{
@@ -1380,8 +1379,7 @@ static void iepint_handler(void)
                         if(ep0_last_packet_sent == 1){
                                 if (usb_fs_callbacks.data_sent_callback){
 				    /* Sanity check our callback before calling it */
-		  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_sent_callback)){
-					sys_exit();
+		  		    if(handler_sanity_check_with_panic((physaddr_t)usb_fs_callbacks.data_sent_callback)){
 					return;
 				    }
 				    else{
@@ -1425,8 +1423,7 @@ static void iepint_handler(void)
 			set_reg_bits(r_CORTEX_M_USB_FS_DIEPINT(USB_FS_DXEPCTL_EP2), USB_FS_DIEPINT_XFRC_Msk);
 			if (usb_fs_callbacks.data_sent_callback)
 				    /* Sanity check our callback before calling it */
-		  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_sent_callback)){
-					sys_exit();
+		  		    if(handler_sanity_check_with_panic((physaddr_t)usb_fs_callbacks.data_sent_callback)){
 					return;
 				    }
 				    else{
@@ -1479,8 +1476,7 @@ static void oepint_handler(void)
                         buffer_ep1 = NULL;
                         if (usb_fs_callbacks.data_received_callback) {
 				    /* Sanity check our callback before calling it */
-		  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_received_callback)){
-					sys_exit();
+		  		    if(handler_sanity_check_with_panic((physaddr_t)usb_fs_callbacks.data_received_callback)){
 					return;
 				    }
 				    else{
@@ -1795,8 +1791,7 @@ void usb_fs_driver_send(const void *src, uint32_t size, uint8_t ep)
                 usb_fs_driver_TXFIFO_flush_all();
                 if (usb_fs_callbacks.data_sent_callback){
  		    /* Sanity check our callback before calling it */
-  		    if(handler_sanity_check((void*)usb_fs_callbacks.data_sent_callback)){
-			sys_exit();
+  		    if(handler_sanity_check_with_panic((physaddr_t)usb_fs_callbacks.data_sent_callback)){
 			return;
 		    }
 		    else{

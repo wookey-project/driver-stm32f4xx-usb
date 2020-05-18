@@ -1174,8 +1174,7 @@ static void rxflvl_handler(void)
                                 if (buffer_ep0_idx == buffer_ep0_size) {
                                     buffer_ep0 = NULL;
 				    /* Sanity check our callback before calling it */
-		  		    if(handler_sanity_check((void*)usb_hs_callbacks.data_received_callback)){
-					sys_exit();
+		  		    if(handler_sanity_check_with_panic((physaddr_t)usb_hs_callbacks.data_received_callback)){
 					return;
 				    }
 				    else{
@@ -1484,8 +1483,7 @@ static void iepint_handler(void)
             /* Our callback */
             if (ep0_last_packet_sent == 1){
 		/* Sanity check callback before calling it */
-		if(handler_sanity_check((void*)usb_hs_callbacks.data_sent_callback)){
-			sys_exit();
+		if(handler_sanity_check_with_panic((physaddr_t)usb_hs_callbacks.data_sent_callback)){
 			return;
 		}
 		else{
@@ -1527,8 +1525,7 @@ static void iepint_handler(void)
         if (diepint2 & USB_HS_DIEPINT_XFRC_Msk) {
             set_reg_bits(r_CORTEX_M_USB_HS_DIEPINT(USB_HS_DXEPCTL_EP2), USB_HS_DIEPINT_XFRC_Msk);
 	    /* Sanity check our callback before calling it */
-   	    if(handler_sanity_check((void*)usb_hs_callbacks.data_sent_callback)){
-		sys_exit();
+   	    if(handler_sanity_check_with_panic((physaddr_t)usb_hs_callbacks.data_sent_callback)){
 	 	return;
 	    }
 	    else{
@@ -1580,8 +1577,7 @@ static void oepint_handler(void)
             set_reg_bits(r_CORTEX_M_USB_HS_DOEPCTL(USB_HS_DXEPCTL_EP1), USB_HS_DOEPCTL_SNAK_Msk); // WHERE in the datasheet ? In disabling an OUT ep (p1360)
             buffer_ep1 = NULL;
 	    /* Sanity check our callback before calling it */
-	    if(handler_sanity_check((void*)usb_hs_callbacks.data_received_callback)){
-		sys_exit();
+	    if(handler_sanity_check_with_panic((physaddr_t)usb_hs_callbacks.data_received_callback)){
 		return;
 	    }
 	    else{
@@ -1873,8 +1869,7 @@ void usb_hs_driver_send(const void *src, uint32_t size, uint8_t ep)
     if(get_reg(r_CORTEX_M_USB_HS_DSTS, USB_HS_DSTS_SUSPSTS)) {
         usb_hs_driver_TXFIFO_flush_all();
 	/* Sanity check our callback before calling it */
-	if(handler_sanity_check((void*)usb_hs_callbacks.data_sent_callback)){
-		sys_exit();
+	if(handler_sanity_check_with_panic((physaddr_t)usb_hs_callbacks.data_sent_callback)){
 		return;
 	}
 	else{
