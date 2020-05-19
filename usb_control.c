@@ -219,8 +219,7 @@ void usb_ctrl_handle_reset(void)
      * handler is called only for reset requests sent after
      * the enumeration step (reset due to error) */
     /* Sanity check our callback before calling it */
-    if(handler_sanity_check((void*)usb_ctrl_callbacks.reset_handler)){
-        sys_exit();
+    if(handler_sanity_check_with_panic((physaddr_t)usb_ctrl_callbacks.reset_handler)){
         return;
     }
     else{
@@ -240,8 +239,7 @@ void usb_ctrl_handle_reset(void)
  */
 static void usb_ctrl_class_rqst_handler(struct usb_setup_packet *packet){
     /* Sanity check our callback before calling it */
-    if(handler_sanity_check((void*)usb_ctrl_callbacks.class_rqst_handler)){
-        sys_exit();
+    if(handler_sanity_check_with_panic((physaddr_t)usb_ctrl_callbacks.class_rqst_handler)){
         return;
     }
     else{
@@ -259,19 +257,18 @@ static void usb_ctrl_class_rqst_handler(struct usb_setup_packet *packet){
  */
 static void usb_ctrl_vendor_rqst_handler(struct usb_setup_packet *packet){
     /* Sanity check our callback before calling it */
-    if(handler_sanity_check((void*)usb_ctrl_callbacks.vendor_rqst_handler)){
-        sys_exit();
+    if(handler_sanity_check_with_panic((physaddr_t)usb_ctrl_callbacks.vendor_rqst_handler)){
         return;
     }
     else{
         usb_ctrl_callbacks.vendor_rqst_handler(packet);
     }
+    return;
 }
 
 static void usb_ctrl_set_interface_rqst_handler(int iface){
     /* Sanity check our callback before calling it */
-    if(handler_sanity_check((void*)usb_ctrl_callbacks.set_interface_rqst_handler)){
-        sys_exit();
+    if(handler_sanity_check_with_panic((physaddr_t)usb_ctrl_callbacks.set_interface_rqst_handler)){
         return;
     }
     else{
@@ -281,8 +278,7 @@ static void usb_ctrl_set_interface_rqst_handler(int iface){
 
 static void usb_ctrl_set_configuration_rqst_handler(int conf){
     /* Sanity check our callback before calling it */
-    if(handler_sanity_check((void*)usb_ctrl_callbacks.set_configuration_rqst_handler)){
-        sys_exit();
+    if(handler_sanity_check_with_panic((physaddr_t)usb_ctrl_callbacks.set_configuration_rqst_handler)){
         return;
     }
     else{
@@ -293,8 +289,7 @@ static void usb_ctrl_set_configuration_rqst_handler(int conf){
 
 static void usb_ctrl_functional_desc_rqst_handler(uint16_t wLength){
     /* Sanity check our callback before calling it */
-    if(handler_sanity_check((void*)usb_ctrl_callbacks.functional_rqst_handler)){
-        sys_exit();
+    if(handler_sanity_check_with_panic((physaddr_t)usb_ctrl_callbacks.functional_rqst_handler)){
         return;
     }
     else{
@@ -354,8 +349,7 @@ static void usb_ctrl_string_desc_rqst_handler(uint8_t index, uint16_t wLength){
 	case STRING_MICROSOFT_INDEX:
         	log_printf("STRING_MICROSOFT_INDEX");
 	       /* Sanity check our callback before calling it */
-	      if(handler_sanity_check((void*)usb_ctrl_callbacks.mft_string_rqst_handler)){
-	 	        sys_exit();
+	      if(handler_sanity_check_with_panic((physaddr_t)usb_ctrl_callbacks.mft_string_rqst_handler)){
 		        return;
 	      }
 	      else{
