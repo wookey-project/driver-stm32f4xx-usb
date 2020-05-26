@@ -1421,7 +1421,7 @@ static void iepint_handler(void)
         /* Bit 2 XFRC: Transfer completed interrupt */
 		if (diepint2 & USB_FS_DIEPINT_XFRC_Msk) {
 			set_reg_bits(r_CORTEX_M_USB_FS_DIEPINT(USB_FS_DXEPCTL_EP2), USB_FS_DIEPINT_XFRC_Msk);
-			if (usb_fs_callbacks.data_sent_callback)
+			if (usb_fs_callbacks.data_sent_callback) {
 				    /* Sanity check our callback before calling it */
 		  		    if(handler_sanity_check_with_panic((physaddr_t)usb_fs_callbacks.data_sent_callback)){
 					return;
@@ -1429,6 +1429,7 @@ static void iepint_handler(void)
 				    else{
 					usb_fs_callbacks.data_sent_callback();
 				    }
+            }
 		}
 
 	}
